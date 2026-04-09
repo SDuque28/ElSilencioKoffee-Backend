@@ -1,6 +1,6 @@
 package ElSilencioKoffee_Backend.security;
 
-import com.reserva_canchas.services.impl.CustomUserDetailsService;
+import ElSilencioKoffee_Backend.services.impl.CustomUserDetailsService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,6 +1,6 @@
 package ElSilencioKoffee_Backend.security;
 
-import com.reserva_canchas.services.impl.CustomUserDetailsService;
+import ElSilencioKoffee_Backend.services.impl.CustomUserDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
