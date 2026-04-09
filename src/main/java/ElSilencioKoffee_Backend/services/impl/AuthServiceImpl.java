@@ -1,7 +1,10 @@
 package ElSilencioKoffee_Backend.services.impl;
 
 import ElSilencioKoffee_Backend.dto.AuthResponse;
+import ElSilencioKoffee_Backend.dto.ChangePasswordRequest;
 import ElSilencioKoffee_Backend.dto.LoginRequest;
+import ElSilencioKoffee_Backend.dto.MessageResponse;
+import ElSilencioKoffee_Backend.dto.PasswordRecoveryRequest;
 import ElSilencioKoffee_Backend.dto.RegisterRequest;
 import ElSilencioKoffee_Backend.entities.Usuario;
 import ElSilencioKoffee_Backend.entities.UsuarioRol;
@@ -74,6 +77,45 @@ public class AuthServiceImpl implements IAuthService {
         return buildResponse(userDetails, usuario.getEmail());
     }
 
+    @Override
+    @Transactional
+    public MessageResponse passwordRecovery(PasswordRecoveryRequest request) {
+        validatePasswordUpdate(request.getNewPassword(), request.getConfirmPassword());
+
+        Usuario usuario = usuarioRepository.findByUsernameAndEmail(request.getUsername(), request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("No user found with the provided username and email"));
+
+        validateActiveUser(usuario);
+        updatePassword(usuario, request.getNewPassword());
+
+        return new MessageResponse("Password updated successfully");
+    }
+
+    @Override
+    @Transactional
+    public MessageResponse changePassword(String username, ChangePasswordRequest request) {
+        validatePasswordUpdate(request.getNewPassword(), request.getConfirmPassword());
+
+        Usuario usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+
+        validateActiveUser(usuario);
+
+        if (isBlank(request.getCurrentPassword())) {
+            throw new IllegalArgumentException("Current password is required");
+        }
+        if (!passwordEncoder.matches(request.getCurrentPassword(), usuario.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), usuario.getPassword())) {
+            throw new IllegalArgumentException("The new password must be different from the current password");
+        }
+
+        updatePassword(usuario, request.getNewPassword());
+
+        return new MessageResponse("Password changed successfully");
+    }
+
     private AuthResponse buildResponse(UserDetails userDetails, String email) {
         String token = jwtUtil.generateToken(userDetails);
         List<String> roles = userDetails.getAuthorities().stream()
@@ -85,5 +127,29 @@ public class AuthServiceImpl implements IAuthService {
         response.setEmail(email);
         response.setRoles(roles);
         return response;
+    }
+
+    private void validatePasswordUpdate(String newPassword, String confirmPassword) {
+        if (isBlank(newPassword) || isBlank(confirmPassword)) {
+            throw new IllegalArgumentException("New password and confirmation are required");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            throw new IllegalArgumentException("New password and confirmation do not match");
+        }
+    }
+
+    private void validateActiveUser(Usuario usuario) {
+        if (Boolean.FALSE.equals(usuario.getActivo())) {
+            throw new IllegalArgumentException("The user is inactive");
+        }
+    }
+
+    private void updatePassword(Usuario usuario, String rawPassword) {
+        usuario.setPassword(passwordEncoder.encode(rawPassword));
+        usuarioRepository.save(usuario);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

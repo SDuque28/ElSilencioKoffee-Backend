@@ -1,6 +1,6 @@
 package ElSilencioKoffee_Backend.security;
 
-import com.reserva_canchas.services.impl.CustomUserDetailsService;
+import ElSilencioKoffee_Backend.services.impl.CustomUserDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -32,9 +32,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public — registration and login
+                        .requestMatchers("/auth/change-password").authenticated()
                         .requestMatchers("/auth/**").permitAll()
-                        // Endpoints without @PreAuthorize are publicly accessible
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(ex -> ex
@@ -50,8 +49,7 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }

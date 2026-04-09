@@ -1,12 +1,16 @@
 package ElSilencioKoffee_Backend.controllers;
 
 import ElSilencioKoffee_Backend.dto.AuthResponse;
+import ElSilencioKoffee_Backend.dto.ChangePasswordRequest;
 import ElSilencioKoffee_Backend.dto.LoginRequest;
+import ElSilencioKoffee_Backend.dto.MessageResponse;
+import ElSilencioKoffee_Backend.dto.PasswordRecoveryRequest;
 import ElSilencioKoffee_Backend.dto.RegisterRequest;
 import ElSilencioKoffee_Backend.services.IAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,5 +31,16 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/password-recovery")
+    public ResponseEntity<MessageResponse> passwordRecovery(@RequestBody PasswordRecoveryRequest request) {
+        return ResponseEntity.ok(authService.passwordRecovery(request));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<MessageResponse> changePassword(Authentication authentication,
+                                                         @RequestBody ChangePasswordRequest request) {
+        return ResponseEntity.ok(authService.changePassword(authentication.getName(), request));
     }
 }
