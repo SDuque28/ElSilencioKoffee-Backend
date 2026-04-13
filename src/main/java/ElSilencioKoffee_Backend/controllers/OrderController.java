@@ -16,6 +16,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/orders")
 @RequiredArgsConstructor
@@ -32,10 +34,19 @@ public class OrderController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<Page<OrderResponse>> findOrders(Authentication authentication,
-                                                          @RequestParam(defaultValue = "1") int page,
-                                                          @RequestParam(defaultValue = "10") int limit) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> findOrders(@RequestParam(required = false) Integer page,
+                                        @RequestParam(required = false) Integer limit) {
+        if (page == null && limit == null) {
+            List<OrderResponse> response = orderService.findAllOrders().stream()
+                    .map(this::toResponse)
+                    .toList();
+            return ResponseEntity.ok(response);
+        }
+
+        if (page == null || limit == null) {
+            throw new IllegalArgumentException("Page and limit must be provided together");
+        }
         if (page < 1) {
             throw new IllegalArgumentException("Page must be greater than or equal to 1");
         }
@@ -49,7 +60,7 @@ public class OrderController {
                 Sort.by(Sort.Direction.DESC, "orderDate", "id")
         );
 
-        Page<OrderResponse> response = orderService.findOrdersByUsername(authentication.getName(), pageable)
+        Page<OrderResponse> response = orderService.findAllOrders(pageable)
                 .map(this::toResponse);
 
         return ResponseEntity.ok(response);

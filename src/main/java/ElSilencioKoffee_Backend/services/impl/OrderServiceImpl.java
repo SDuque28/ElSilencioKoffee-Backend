@@ -9,10 +9,12 @@ import ElSilencioKoffee_Backend.services.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
@@ -35,6 +37,28 @@ public class OrderServiceImpl implements IOrderService {
         order.setStatus(OrderStatus.NON_PAID);
 
         return orderRepository.save(order);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Order> findAllOrders() {
+        return orderRepository.findAll(Sort.by(Sort.Direction.DESC, "orderDate", "id"));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Order> findAllOrders(Pageable pageable) {
+        return orderRepository.findAll(pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Order> findOrdersByUsername(String username) {
+        Usuario usuario = findUserByUsername(username);
+        return orderRepository.findAllByUsuarioId(
+                usuario.getId(),
+                Sort.by(Sort.Direction.DESC, "orderDate", "id")
+        );
     }
 
     @Override
