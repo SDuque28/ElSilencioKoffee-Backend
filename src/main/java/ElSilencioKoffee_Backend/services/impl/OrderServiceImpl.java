@@ -1,9 +1,13 @@
 package ElSilencioKoffee_Backend.services.impl;
 
+import ElSilencioKoffee_Backend.dto.OrderCreateItemRequest;
+import ElSilencioKoffee_Backend.entities.OrderDetail;
 import ElSilencioKoffee_Backend.entities.Order;
 import ElSilencioKoffee_Backend.entities.OrderStatus;
+import ElSilencioKoffee_Backend.entities.Product;
 import ElSilencioKoffee_Backend.entities.Usuario;
 import ElSilencioKoffee_Backend.repository.OrderRepository;
+import ElSilencioKoffee_Backend.repository.ProductRepository;
 import ElSilencioKoffee_Backend.repository.UsuarioRepository;
 import ElSilencioKoffee_Backend.services.IOrderService;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -22,19 +28,20 @@ import java.util.NoSuchElementException;
 public class OrderServiceImpl implements IOrderService {
 
     private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
     private final UsuarioRepository usuarioRepository;
 
     @Override
     @Transactional
-    public Order createOrder(String username, BigDecimal totalAmount) {
-        validateTotalAmount(totalAmount);
-
+    public Order createOrder(String username, List<OrderCreateItemRequest> items) {
+        Map<Long, Integer> normalizedItems = normalizeItems(items);
         Usuario usuario = findUserByUsername(username);
+        Map<Long, Product> productsById = findProductsById(normalizedItems.keySet());
 
         Order order = new Order();
         order.setUsuario(usuario);
-        order.setTotalAmount(totalAmount);
         order.setStatus(OrderStatus.NON_PAID);
+        order.setTotalAmount(calculateAndAttachOrderDetails(order, normalizedItems, productsById));
 
         return orderRepository.save(order);
     }
@@ -86,6 +93,7 @@ public class OrderServiceImpl implements IOrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + id));
 
+        validateStatusTransition(order.getStatus(), status);
         order.setStatus(status);
         return orderRepository.save(order);
     }
@@ -95,12 +103,88 @@ public class OrderServiceImpl implements IOrderService {
                 .orElseThrow(() -> new NoSuchElementException("User not found: " + username));
     }
 
-    private void validateTotalAmount(BigDecimal totalAmount) {
-        if (totalAmount == null) {
-            throw new IllegalArgumentException("Total amount is required");
+    private Map<Long, Integer> normalizeItems(List<OrderCreateItemRequest> items) {
+        if (items == null || items.isEmpty()) {
+            throw new IllegalArgumentException("Order must contain at least one item");
         }
-        if (totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Total amount must be greater than 0");
+
+        Map<Long, Integer> normalizedItems = new LinkedHashMap<>();
+
+        for (OrderCreateItemRequest item : items) {
+            if (item == null) {
+                throw new IllegalArgumentException("Order items must not be null");
+            }
+            if (item.getProductId() == null) {
+                throw new IllegalArgumentException("Product ID is required");
+            }
+            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new IllegalArgumentException("Item quantity must be greater than 0");
+            }
+
+            normalizedItems.merge(item.getProductId(), item.getQuantity(), Integer::sum);
         }
+
+        return normalizedItems;
+    }
+
+    private Map<Long, Product> findProductsById(Iterable<Long> productIds) {
+        List<Product> products = productRepository.findAllById(productIds);
+        Map<Long, Product> productsById = new LinkedHashMap<>();
+
+        for (Product product : products) {
+            productsById.put(product.getId(), product);
+        }
+
+        for (Long productId : productIds) {
+            if (!productsById.containsKey(productId)) {
+                throw new NoSuchElementException("Product not found: " + productId);
+            }
+        }
+
+        return productsById;
+    }
+
+    private BigDecimal calculateAndAttachOrderDetails(
+            Order order,
+            Map<Long, Integer> normalizedItems,
+            Map<Long, Product> productsById
+    ) {
+        BigDecimal totalAmount = BigDecimal.ZERO;
+
+        for (Map.Entry<Long, Integer> entry : normalizedItems.entrySet()) {
+            Product product = productsById.get(entry.getKey());
+            BigDecimal quantity = BigDecimal.valueOf(entry.getValue());
+            BigDecimal unitPrice = product.getPrice();
+
+            OrderDetail orderDetail = new OrderDetail();
+            orderDetail.setProduct(product);
+            orderDetail.setQuantity(quantity);
+            orderDetail.setUnitPrice(unitPrice);
+            order.addOrderDetail(orderDetail);
+
+            totalAmount = totalAmount.add(unitPrice.multiply(quantity));
+        }
+
+        return totalAmount;
+    }
+
+    private void validateStatusTransition(OrderStatus currentStatus, OrderStatus nextStatus) {
+        if (currentStatus == nextStatus) {
+            throw new IllegalArgumentException("Order is already in status: " + nextStatus.toJson());
+        }
+
+        if (currentStatus == OrderStatus.PAID) {
+            throw new IllegalArgumentException(
+                    "Invalid order status transition: " + currentStatus.toJson() + " -> " + nextStatus.toJson()
+            );
+        }
+
+        if (currentStatus == OrderStatus.NON_PAID && nextStatus == OrderStatus.PAID) {
+            return;
+        }
+
+        throw new IllegalArgumentException(
+                "Invalid order status transition: " + currentStatus.toJson() + " -> " + nextStatus.toJson()
+        );
     }
 }

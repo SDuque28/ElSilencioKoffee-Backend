@@ -9,6 +9,8 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "orders")
@@ -16,7 +18,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = "usuario")
+@ToString(exclude = {"usuario", "orderDetails"})
 public class Order {
 
     @Id
@@ -37,10 +39,18 @@ public class Order {
     @Column(nullable = false, length = 20)
     private OrderStatus status;
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderDetail> orderDetails = new ArrayList<>();
+
     @PrePersist
     void prePersist() {
         if (orderDate == null) {
             orderDate = LocalDateTime.now();
         }
+    }
+
+    public void addOrderDetail(OrderDetail orderDetail) {
+        orderDetails.add(orderDetail);
+        orderDetail.setOrder(this);
     }
 }
