@@ -5,6 +5,7 @@ import ElSilencioKoffee_Backend.entities.Order;
 import ElSilencioKoffee_Backend.entities.OrderStatus;
 import ElSilencioKoffee_Backend.entities.Product;
 import ElSilencioKoffee_Backend.entities.Usuario;
+import ElSilencioKoffee_Backend.repository.OrderRepository;
 import ElSilencioKoffee_Backend.repository.ProductRepository;
 import ElSilencioKoffee_Backend.repository.UsuarioRepository;
 import ElSilencioKoffee_Backend.services.IOrderService;
@@ -18,6 +19,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @Transactional
@@ -28,6 +30,9 @@ class OrderServiceImplTests {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     @Autowired
     private ProductRepository productRepository;
@@ -78,5 +83,64 @@ class OrderServiceImplTests {
                 IllegalArgumentException.class,
                 () -> orderService.createOrder("checkout-user", List.of())
         );
+    }
+
+    @Test
+    void updateStatusAllowsTransitionFromNonPaidToPaid() {
+        Order order = createPersistedOrder(OrderStatus.NON_PAID);
+
+        Order updatedOrder = orderService.updateStatus(order.getId(), OrderStatus.PAID);
+
+        assertEquals(OrderStatus.PAID, updatedOrder.getStatus());
+    }
+
+    @Test
+    void updateStatusRejectsSameStatusTransition() {
+        Order order = createPersistedOrder(OrderStatus.NON_PAID);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.updateStatus(order.getId(), OrderStatus.NON_PAID)
+        );
+
+        assertEquals("Order is already in status: NON PAID", exception.getMessage());
+    }
+
+    @Test
+    void updateStatusRejectsChangesFromTerminalPaidStatus() {
+        Order order = createPersistedOrder(OrderStatus.PAID);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.updateStatus(order.getId(), OrderStatus.NON_PAID)
+        );
+
+        assertEquals("Invalid order status transition: PAID -> NON PAID", exception.getMessage());
+    }
+
+    @Test
+    void orderStatusRejectsUnknownValues() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> OrderStatus.fromValue("REFUNDED")
+        );
+
+        assertTrue(exception.getMessage().contains("Invalid order status: REFUNDED"));
+    }
+
+    private Order createPersistedOrder(OrderStatus status) {
+        Usuario usuario = new Usuario();
+        usuario.setUsername("status-user-" + status.name());
+        usuario.setPassword("secret");
+        usuario.setEmail("status-" + status.name().toLowerCase() + "@example.com");
+        usuario.setActivo(true);
+        usuario = usuarioRepository.save(usuario);
+
+        Order order = new Order();
+        order.setUsuario(usuario);
+        order.setStatus(status);
+        order.setTotalAmount(new BigDecimal("18.00"));
+
+        return orderRepository.save(order);
     }
 }

@@ -93,6 +93,7 @@ public class OrderServiceImpl implements IOrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + id));
 
+        validateStatusTransition(order.getStatus(), status);
         order.setStatus(status);
         return orderRepository.save(order);
     }
@@ -165,5 +166,25 @@ public class OrderServiceImpl implements IOrderService {
         }
 
         return totalAmount;
+    }
+
+    private void validateStatusTransition(OrderStatus currentStatus, OrderStatus nextStatus) {
+        if (currentStatus == nextStatus) {
+            throw new IllegalArgumentException("Order is already in status: " + nextStatus.toJson());
+        }
+
+        if (currentStatus == OrderStatus.PAID) {
+            throw new IllegalArgumentException(
+                    "Invalid order status transition: " + currentStatus.toJson() + " -> " + nextStatus.toJson()
+            );
+        }
+
+        if (currentStatus == OrderStatus.NON_PAID && nextStatus == OrderStatus.PAID) {
+            return;
+        }
+
+        throw new IllegalArgumentException(
+                "Invalid order status transition: " + currentStatus.toJson() + " -> " + nextStatus.toJson()
+        );
     }
 }
