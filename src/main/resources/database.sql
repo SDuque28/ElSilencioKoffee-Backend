@@ -88,6 +88,7 @@ CREATE TABLE product_presentations (
 CREATE TABLE products (
     id_product SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
+    image_url VARCHAR(255),
     price NUMERIC(10,2) NOT NULL,
     id_presentation INT UNSIGNED NOT NULL,
     id_production INT UNSIGNED NOT NULL,
