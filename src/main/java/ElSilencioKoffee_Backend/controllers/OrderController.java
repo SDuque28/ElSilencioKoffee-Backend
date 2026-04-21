@@ -1,8 +1,11 @@
 package ElSilencioKoffee_Backend.controllers;
 
+import ElSilencioKoffee_Backend.dto.OrderCreateResponse;
 import ElSilencioKoffee_Backend.dto.OrderCreateRequest;
+import ElSilencioKoffee_Backend.dto.OrderItemResponse;
 import ElSilencioKoffee_Backend.dto.OrderResponse;
 import ElSilencioKoffee_Backend.dto.OrderStatusUpdateRequest;
+import ElSilencioKoffee_Backend.entities.OrderDetail;
 import ElSilencioKoffee_Backend.entities.Order;
 import ElSilencioKoffee_Backend.services.IOrderService;
 import lombok.RequiredArgsConstructor;
@@ -27,10 +30,10 @@ public class OrderController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('USER','ADMIN')")
-    public ResponseEntity<OrderResponse> createOrder(Authentication authentication,
-                                                     @RequestBody OrderCreateRequest request) {
-        Order order = orderService.createOrder(authentication.getName(), request.getTotalAmount());
-        return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(order));
+    public ResponseEntity<OrderCreateResponse> createOrder(Authentication authentication,
+                                                           @RequestBody OrderCreateRequest request) {
+        Order order = orderService.createOrder(authentication.getName(), request.getItems());
+        return ResponseEntity.status(HttpStatus.CREATED).body(toCreateResponse(order));
     }
 
     @GetMapping
@@ -88,6 +91,28 @@ public class OrderController {
         response.setOrderDate(order.getOrderDate());
         response.setTotalAmount(order.getTotalAmount());
         response.setStatus(order.getStatus());
+        return response;
+    }
+
+    private OrderCreateResponse toCreateResponse(Order order) {
+        OrderCreateResponse response = new OrderCreateResponse();
+        response.setId(order.getId());
+        response.setUserId(order.getUsuario().getId());
+        response.setOrderDate(order.getOrderDate());
+        response.setTotalAmount(order.getTotalAmount());
+        response.setStatus(order.getStatus());
+        response.setItems(order.getOrderDetails().stream()
+                .map(this::toItemResponse)
+                .toList());
+        return response;
+    }
+
+    private OrderItemResponse toItemResponse(OrderDetail orderDetail) {
+        OrderItemResponse response = new OrderItemResponse();
+        response.setProductId(orderDetail.getProduct().getId());
+        response.setQuantity(orderDetail.getQuantity().intValueExact());
+        response.setUnitPrice(orderDetail.getUnitPrice());
+        response.setSubtotal(orderDetail.getUnitPrice().multiply(orderDetail.getQuantity()));
         return response;
     }
 }
