@@ -77,6 +77,13 @@ public class OrderServiceImpl implements IOrderService {
 
     @Override
     @Transactional(readOnly = true)
+    public Order findOrderById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Order findOrderByIdForUsername(Long id, String username) {
         Usuario usuario = findUserByUsername(username);
         return orderRepository.findByIdAndUsuarioId(id, usuario.getId())

@@ -21,7 +21,7 @@ public class UserOrderController {
     private final IOrderService orderService;
 
     @GetMapping
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<OrderResponse>> findMyOrders(Authentication authentication) {
         List<OrderResponse> response = orderService.findOrdersByUsername(authentication.getName()).stream()
                 .map(this::toResponse)

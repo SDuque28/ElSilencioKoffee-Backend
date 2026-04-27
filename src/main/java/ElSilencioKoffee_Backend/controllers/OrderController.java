@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -70,9 +71,11 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<OrderResponse> findOrderById(Authentication authentication, @PathVariable Long id) {
-        Order order = orderService.findOrderByIdForUsername(id, authentication.getName());
+        Order order = isAdmin(authentication)
+                ? orderService.findOrderById(id)
+                : orderService.findOrderByIdForUsername(id, authentication.getName());
         return ResponseEntity.ok(toResponse(order));
     }
 
@@ -114,5 +117,11 @@ public class OrderController {
         response.setUnitPrice(orderDetail.getUnitPrice());
         response.setSubtotal(orderDetail.getUnitPrice().multiply(orderDetail.getQuantity()));
         return response;
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
     }
 }

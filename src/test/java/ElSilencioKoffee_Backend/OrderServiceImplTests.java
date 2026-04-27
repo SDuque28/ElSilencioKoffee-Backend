@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -116,6 +117,46 @@ class OrderServiceImplTests {
         );
 
         assertEquals("Invalid order status transition: PAID -> NON PAID", exception.getMessage());
+    }
+
+    @Test
+    void findOrderByIdReturnsAnyOrderForAdminScopedLookups() {
+        Order order = createPersistedOrder(OrderStatus.NON_PAID);
+
+        Order foundOrder = orderService.findOrderById(order.getId());
+
+        assertEquals(order.getId(), foundOrder.getId());
+        assertEquals(order.getUsuario().getId(), foundOrder.getUsuario().getId());
+    }
+
+    @Test
+    void findOrderByIdForUsernameRejectsOrdersOwnedByAnotherUser() {
+        Usuario owner = new Usuario();
+        owner.setUsername("owner-user");
+        owner.setPassword("secret");
+        owner.setEmail("owner@example.com");
+        owner.setActivo(true);
+        owner = usuarioRepository.save(owner);
+
+        Usuario otherUser = new Usuario();
+        otherUser.setUsername("other-user");
+        otherUser.setPassword("secret");
+        otherUser.setEmail("other@example.com");
+        otherUser.setActivo(true);
+        usuarioRepository.save(otherUser);
+
+        Order order = new Order();
+        order.setUsuario(owner);
+        order.setStatus(OrderStatus.NON_PAID);
+        order.setTotalAmount(new BigDecimal("18.00"));
+        Order savedOrder = orderRepository.save(order);
+
+        NoSuchElementException exception = assertThrows(
+                NoSuchElementException.class,
+                () -> orderService.findOrderByIdForUsername(savedOrder.getId(), otherUser.getUsername())
+        );
+
+        assertEquals("Order not found: " + savedOrder.getId(), exception.getMessage());
     }
 
     @Test

@@ -20,6 +20,8 @@ public interface IOrderService {
 
     Page<Order> findOrdersByUsername(String username, Pageable pageable);
 
+    Order findOrderById(Long id);
+
     Order findOrderByIdForUsername(Long id, String username);
 
     Order updateStatus(Long id, OrderStatus status);
