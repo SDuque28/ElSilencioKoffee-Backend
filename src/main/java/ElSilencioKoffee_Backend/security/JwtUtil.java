@@ -28,8 +28,11 @@ public class JwtUtil {
         if (secret == null || secret.isBlank()) {
             throw new IllegalStateException("JWT secret must be provided via JWT_SECRET environment configuration.");
         }
-        if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
-            throw new IllegalStateException("JWT secret must be at least 32 bytes long.");
+        int secretLength = secret.getBytes(StandardCharsets.UTF_8).length;
+        if (secretLength < 32) {
+            throw new IllegalStateException(
+                    "JWT secret must be at least 32 bytes long, but was configured with " + secretLength + " bytes."
+            );
         }
         if (expiration <= 0) {
             throw new IllegalStateException("JWT expiration must be greater than 0.");
