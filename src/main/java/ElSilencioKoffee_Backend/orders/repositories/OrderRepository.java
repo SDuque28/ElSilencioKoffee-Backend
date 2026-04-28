@@ -13,23 +13,23 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Override
-    @EntityGraph(attributePaths = "usuario")
+    @EntityGraph(attributePaths = {"usuario", "orderDetails", "orderDetails.product"})
     Page<Order> findAll(Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = "usuario")
+    @EntityGraph(attributePaths = {"usuario", "orderDetails", "orderDetails.product"})
     List<Order> findAll(Sort sort);
 
-    @EntityGraph(attributePaths = "usuario")
+    @EntityGraph(attributePaths = {"usuario", "orderDetails", "orderDetails.product"})
     Page<Order> findByUsuarioId(Long userId, Pageable pageable);
 
-    @EntityGraph(attributePaths = "usuario")
+    @EntityGraph(attributePaths = {"usuario", "orderDetails", "orderDetails.product"})
     Optional<Order> findByIdAndUsuarioId(Long id, Long userId);
 
-    @EntityGraph(attributePaths = "usuario")
+    @EntityGraph(attributePaths = {"usuario", "orderDetails", "orderDetails.product"})
     Optional<Order> findById(Long id);
 
-    @EntityGraph(attributePaths = "usuario")
+    @EntityGraph(attributePaths = {"usuario", "orderDetails", "orderDetails.product"})
     List<Order> findAllByUsuarioId(Long userId, Sort sort);
 }
 

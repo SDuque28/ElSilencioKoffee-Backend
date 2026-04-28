@@ -124,6 +124,9 @@ public class OrderServiceImpl implements IOrderService {
             if (item.getProductId() == null) {
                 throw new IllegalArgumentException("Product ID is required");
             }
+            if (item.getProductId() <= 0) {
+                throw new IllegalArgumentException("Product ID must be greater than 0");
+            }
             if (item.getQuantity() == null || item.getQuantity() <= 0) {
                 throw new IllegalArgumentException("Item quantity must be greater than 0");
             }

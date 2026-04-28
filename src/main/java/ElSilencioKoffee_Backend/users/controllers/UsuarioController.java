@@ -1,6 +1,7 @@
 package ElSilencioKoffee_Backend.users.controllers;
 
 import ElSilencioKoffee_Backend.orders.dto.OrderResponse;
+import ElSilencioKoffee_Backend.orders.dto.OrderResponseMapper;
 import ElSilencioKoffee_Backend.orders.entities.Order;
 import ElSilencioKoffee_Backend.users.dto.UserResponse;
 import ElSilencioKoffee_Backend.users.dto.UserUpdateRequest;
@@ -75,7 +76,7 @@ public class UsuarioController {
     @GetMapping("/{id}/orders")
     public ResponseEntity<List<OrderResponse>> findOrdersByUserId(@PathVariable Long id) {
         List<OrderResponse> response = usuarioService.findOrdersByUserId(id).stream()
-                .map(this::toOrderResponse)
+                .map(OrderResponseMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -90,14 +91,5 @@ public class UsuarioController {
         return response;
     }
 
-    private OrderResponse toOrderResponse(Order order) {
-        OrderResponse response = new OrderResponse();
-        response.setId(order.getId());
-        response.setUserId(order.getUsuario().getId());
-        response.setOrderDate(order.getOrderDate());
-        response.setTotalAmount(order.getTotalAmount());
-        response.setStatus(order.getStatus());
-        return response;
-    }
 }
 

@@ -2,11 +2,10 @@ package ElSilencioKoffee_Backend.orders.controllers;
 
 import ElSilencioKoffee_Backend.orders.dto.OrderCreateRequest;
 import ElSilencioKoffee_Backend.orders.dto.OrderCreateResponse;
-import ElSilencioKoffee_Backend.orders.dto.OrderItemResponse;
 import ElSilencioKoffee_Backend.orders.dto.OrderResponse;
+import ElSilencioKoffee_Backend.orders.dto.OrderResponseMapper;
 import ElSilencioKoffee_Backend.orders.dto.OrderStatusUpdateRequest;
 import ElSilencioKoffee_Backend.orders.entities.Order;
-import ElSilencioKoffee_Backend.orders.entities.OrderDetail;
 import ElSilencioKoffee_Backend.orders.services.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,7 +33,7 @@ public class OrderController {
     public ResponseEntity<OrderCreateResponse> createOrder(Authentication authentication,
                                                            @RequestBody OrderCreateRequest request) {
         Order order = orderService.createOrder(authentication.getName(), request.getItems());
-        return ResponseEntity.status(HttpStatus.CREATED).body(toCreateResponse(order));
+        return ResponseEntity.status(HttpStatus.CREATED).body(OrderResponseMapper.toCreateResponse(order));
     }
 
     @GetMapping
@@ -43,7 +42,7 @@ public class OrderController {
                                         @RequestParam(required = false) Integer limit) {
         if (page == null && limit == null) {
             List<OrderResponse> response = orderService.findAllOrders().stream()
-                    .map(this::toResponse)
+                    .map(OrderResponseMapper::toResponse)
                     .toList();
             return ResponseEntity.ok(response);
         }
@@ -65,7 +64,7 @@ public class OrderController {
         );
 
         Page<OrderResponse> response = orderService.findAllOrders(pageable)
-                .map(this::toResponse);
+                .map(OrderResponseMapper::toResponse);
 
         return ResponseEntity.ok(response);
     }
@@ -76,7 +75,7 @@ public class OrderController {
         Order order = isAdmin(authentication)
                 ? orderService.findOrderById(id)
                 : orderService.findOrderByIdForUsername(id, authentication.getName());
-        return ResponseEntity.ok(toResponse(order));
+        return ResponseEntity.ok(OrderResponseMapper.toResponse(order));
     }
 
     @PatchMapping("/{id}/status")
@@ -84,39 +83,7 @@ public class OrderController {
     public ResponseEntity<OrderResponse> updateStatus(@PathVariable Long id,
                                                       @RequestBody OrderStatusUpdateRequest request) {
         Order order = orderService.updateStatus(id, request.getStatus());
-        return ResponseEntity.ok(toResponse(order));
-    }
-
-    private OrderResponse toResponse(Order order) {
-        OrderResponse response = new OrderResponse();
-        response.setId(order.getId());
-        response.setUserId(order.getUsuario().getId());
-        response.setOrderDate(order.getOrderDate());
-        response.setTotalAmount(order.getTotalAmount());
-        response.setStatus(order.getStatus());
-        return response;
-    }
-
-    private OrderCreateResponse toCreateResponse(Order order) {
-        OrderCreateResponse response = new OrderCreateResponse();
-        response.setId(order.getId());
-        response.setUserId(order.getUsuario().getId());
-        response.setOrderDate(order.getOrderDate());
-        response.setTotalAmount(order.getTotalAmount());
-        response.setStatus(order.getStatus());
-        response.setItems(order.getOrderDetails().stream()
-                .map(this::toItemResponse)
-                .toList());
-        return response;
-    }
-
-    private OrderItemResponse toItemResponse(OrderDetail orderDetail) {
-        OrderItemResponse response = new OrderItemResponse();
-        response.setProductId(orderDetail.getProduct().getId());
-        response.setQuantity(orderDetail.getQuantity().intValueExact());
-        response.setUnitPrice(orderDetail.getUnitPrice());
-        response.setSubtotal(orderDetail.getUnitPrice().multiply(orderDetail.getQuantity()));
-        return response;
+        return ResponseEntity.ok(OrderResponseMapper.toResponse(order));
     }
 
     private boolean isAdmin(Authentication authentication) {

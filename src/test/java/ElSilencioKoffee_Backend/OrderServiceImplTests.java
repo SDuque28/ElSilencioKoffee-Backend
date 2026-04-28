@@ -40,12 +40,7 @@ class OrderServiceImplTests {
 
     @Test
     void createOrderBuildsTotalFromProductsAndPersistsDetails() {
-        Usuario usuario = new Usuario();
-        usuario.setUsername("checkout-user");
-        usuario.setPassword("secret");
-        usuario.setEmail("checkout@example.com");
-        usuario.setActivo(true);
-        usuario = usuarioRepository.save(usuario);
+        Usuario usuario = createUser("checkout-user", "checkout@example.com");
 
         Product productOne = new Product();
         productOne.setId(1L);
@@ -76,6 +71,9 @@ class OrderServiceImplTests {
         assertEquals(1L, order.getOrderDetails().getFirst().getProduct().getId());
         assertEquals(new BigDecimal("2"), order.getOrderDetails().getFirst().getQuantity());
         assertEquals(new BigDecimal("26.00"), order.getOrderDetails().getFirst().getUnitPrice());
+        assertEquals(2L, order.getOrderDetails().get(1).getProduct().getId());
+        assertEquals(new BigDecimal("1"), order.getOrderDetails().get(1).getQuantity());
+        assertEquals(new BigDecimal("18.00"), order.getOrderDetails().get(1).getUnitPrice());
     }
 
     @Test
@@ -84,6 +82,49 @@ class OrderServiceImplTests {
                 IllegalArgumentException.class,
                 () -> orderService.createOrder("checkout-user", List.of())
         );
+    }
+
+    @Test
+    void createOrderRejectsMissingProductReferences() {
+        Usuario usuario = createUser("missing-product-user", "missing-product@example.com");
+        OrderCreateItemRequest item = new OrderCreateItemRequest();
+        item.setProductId(999L);
+        item.setQuantity(1);
+
+        NoSuchElementException exception = assertThrows(
+                NoSuchElementException.class,
+                () -> orderService.createOrder(usuario.getUsername(), List.of(item))
+        );
+
+        assertEquals("Product not found: 999", exception.getMessage());
+    }
+
+    @Test
+    void createOrderRejectsNonPositiveQuantities() {
+        OrderCreateItemRequest item = new OrderCreateItemRequest();
+        item.setProductId(1L);
+        item.setQuantity(0);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.createOrder("checkout-user", List.of(item))
+        );
+
+        assertEquals("Item quantity must be greater than 0", exception.getMessage());
+    }
+
+    @Test
+    void createOrderRejectsInvalidProductIdValues() {
+        OrderCreateItemRequest item = new OrderCreateItemRequest();
+        item.setProductId(0L);
+        item.setQuantity(1);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.createOrder("checkout-user", List.of(item))
+        );
+
+        assertEquals("Product ID must be greater than 0", exception.getMessage());
     }
 
     @Test
@@ -130,6 +171,40 @@ class OrderServiceImplTests {
     }
 
     @Test
+    void findOrderByIdReturnsPersistedLineItems() {
+        Usuario usuario = createUser("history-user", "history@example.com");
+
+        Product productOne = new Product();
+        productOne.setId(1L);
+        productOne.setName("Colombia Supremo");
+        productOne.setPrice(new BigDecimal("24.00"));
+        persistProduct(productOne, 1, 1, 1, 1);
+
+        Product productTwo = new Product();
+        productTwo.setId(2L);
+        productTwo.setName("Kenya AA");
+        productTwo.setPrice(new BigDecimal("28.00"));
+        persistProduct(productTwo, 2, 2, 2, 2);
+
+        OrderCreateItemRequest firstItem = new OrderCreateItemRequest();
+        firstItem.setProductId(1L);
+        firstItem.setQuantity(1);
+
+        OrderCreateItemRequest secondItem = new OrderCreateItemRequest();
+        secondItem.setProductId(2L);
+        secondItem.setQuantity(3);
+
+        Order created = orderService.createOrder(usuario.getUsername(), List.of(firstItem, secondItem));
+
+        Order found = orderService.findOrderById(created.getId());
+
+        assertEquals(2, found.getOrderDetails().size());
+        assertEquals("Colombia Supremo", found.getOrderDetails().getFirst().getProduct().getName());
+        assertEquals(new BigDecimal("24.00"), found.getOrderDetails().getFirst().getUnitPrice());
+        assertEquals(new BigDecimal("108.00"), found.getTotalAmount());
+    }
+
+    @Test
     void findOrderByIdForUsernameRejectsOrdersOwnedByAnotherUser() {
         Usuario owner = new Usuario();
         owner.setUsername("owner-user");
@@ -170,12 +245,10 @@ class OrderServiceImplTests {
     }
 
     private Order createPersistedOrder(OrderStatus status) {
-        Usuario usuario = new Usuario();
-        usuario.setUsername("status-user-" + status.name());
-        usuario.setPassword("secret");
-        usuario.setEmail("status-" + status.name().toLowerCase() + "@example.com");
-        usuario.setActivo(true);
-        usuario = usuarioRepository.save(usuario);
+        Usuario usuario = createUser(
+                "status-user-" + status.name(),
+                "status-" + status.name().toLowerCase() + "@example.com"
+        );
 
         Order order = new Order();
         order.setUsuario(usuario);
@@ -183,6 +256,15 @@ class OrderServiceImplTests {
         order.setTotalAmount(new BigDecimal("18.00"));
 
         return orderRepository.save(order);
+    }
+
+    private Usuario createUser(String username, String email) {
+        Usuario usuario = new Usuario();
+        usuario.setUsername(username);
+        usuario.setPassword("secret");
+        usuario.setEmail(email);
+        usuario.setActivo(true);
+        return usuarioRepository.save(usuario);
     }
 
     private void persistProduct(

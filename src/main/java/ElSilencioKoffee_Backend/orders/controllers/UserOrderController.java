@@ -1,6 +1,7 @@
 package ElSilencioKoffee_Backend.orders.controllers;
 
 import ElSilencioKoffee_Backend.orders.dto.OrderResponse;
+import ElSilencioKoffee_Backend.orders.dto.OrderResponseMapper;
 import ElSilencioKoffee_Backend.orders.entities.Order;
 import ElSilencioKoffee_Backend.orders.services.IOrderService;
 import lombok.RequiredArgsConstructor;
@@ -24,19 +25,9 @@ public class UserOrderController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<OrderResponse>> findMyOrders(Authentication authentication) {
         List<OrderResponse> response = orderService.findOrdersByUsername(authentication.getName()).stream()
-                .map(this::toResponse)
+                .map(OrderResponseMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(response);
-    }
-
-    private OrderResponse toResponse(Order order) {
-        OrderResponse response = new OrderResponse();
-        response.setId(order.getId());
-        response.setUserId(order.getUsuario().getId());
-        response.setOrderDate(order.getOrderDate());
-        response.setTotalAmount(order.getTotalAmount());
-        response.setStatus(order.getStatus());
-        return response;
     }
 }
 
