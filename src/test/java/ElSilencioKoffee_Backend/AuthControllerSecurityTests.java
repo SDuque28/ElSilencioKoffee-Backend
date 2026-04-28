@@ -62,7 +62,9 @@ class AuthControllerSecurityTests {
                                         """)
                 )
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value("public-user"));
+                .andExpect(jsonPath("$.username").value("public-user"))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
 
         mockMvc.perform(
                         post("/auth/login")
@@ -72,7 +74,9 @@ class AuthControllerSecurityTests {
                                         """)
                 )
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt-token"));
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
 
         mockMvc.perform(
                         post("/auth/password-recovery")

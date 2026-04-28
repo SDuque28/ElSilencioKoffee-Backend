@@ -40,17 +40,21 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (usuarioRepository.findByUsername(request.getUsername()).isPresent()) {
-            throw new IllegalArgumentException("Username already taken: " + request.getUsername());
+        String username = normalizeRequired(request.getUsername(), "Username is required");
+        String email = normalizeRequired(request.getEmail(), "Email is required");
+        String rawPassword = requirePassword(request.getPassword(), "Password is required");
+
+        if (usuarioRepository.findByUsername(username).isPresent()) {
+            throw new IllegalArgumentException("Username already taken: " + username);
         }
-        if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Email already taken: " + request.getEmail());
+        if (usuarioRepository.findByEmail(email).isPresent()) {
+            throw new IllegalArgumentException("Email already taken: " + email);
         }
 
         Usuario usuario = new Usuario();
-        usuario.setUsername(request.getUsername());
-        usuario.setEmail(request.getEmail());
-        usuario.setPassword(passwordEncoder.encode(request.getPassword()));
+        usuario.setUsername(username);
+        usuario.setEmail(email);
+        usuario.setPassword(passwordEncoder.encode(rawPassword));
         usuario.setActivo(true);
         usuarioRepository.save(usuario);
 
@@ -68,12 +72,15 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
+        String username = normalizeRequired(request.getUsername(), "Username is required");
+        String password = requirePassword(request.getPassword(), "Password is required");
+
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(username, password)
         );
-        Usuario usuario = usuarioRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.getUsername()));
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+        Usuario usuario = usuarioRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         return buildResponse(userDetails, usuario.getEmail());
     }
 
@@ -147,6 +154,20 @@ public class AuthServiceImpl implements IAuthService {
     private void updatePassword(Usuario usuario, String rawPassword) {
         usuario.setPassword(passwordEncoder.encode(rawPassword));
         usuarioRepository.save(usuario);
+    }
+
+    private String normalizeRequired(String value, String message) {
+        if (isBlank(value)) {
+            throw new IllegalArgumentException(message);
+        }
+        return value.trim();
+    }
+
+    private String requirePassword(String value, String message) {
+        if (isBlank(value)) {
+            throw new IllegalArgumentException(message);
+        }
+        return value;
     }
 
     private boolean isBlank(String value) {
