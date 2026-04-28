@@ -1,8 +1,8 @@
 package ElSilencioKoffee_Backend;
 
-import ElSilencioKoffee_Backend.dto.AuthResponse;
-import ElSilencioKoffee_Backend.dto.MessageResponse;
-import ElSilencioKoffee_Backend.services.IAuthService;
+import ElSilencioKoffee_Backend.auth.dto.AuthResponse;
+import ElSilencioKoffee_Backend.auth.services.IAuthService;
+import ElSilencioKoffee_Backend.shared.dto.MessageResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

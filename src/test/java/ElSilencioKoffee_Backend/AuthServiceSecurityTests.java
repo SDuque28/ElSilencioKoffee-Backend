@@ -1,16 +1,16 @@
 package ElSilencioKoffee_Backend;
 
-import ElSilencioKoffee_Backend.dto.AuthResponse;
-import ElSilencioKoffee_Backend.dto.LoginRequest;
-import ElSilencioKoffee_Backend.dto.RegisterRequest;
-import ElSilencioKoffee_Backend.entities.Rol;
-import ElSilencioKoffee_Backend.entities.Usuario;
-import ElSilencioKoffee_Backend.entities.UsuarioRol;
-import ElSilencioKoffee_Backend.entities.UsuarioRolId;
-import ElSilencioKoffee_Backend.repository.RolRepository;
-import ElSilencioKoffee_Backend.repository.UsuarioRepository;
-import ElSilencioKoffee_Backend.repository.UsuarioRolRepository;
-import ElSilencioKoffee_Backend.services.IAuthService;
+import ElSilencioKoffee_Backend.auth.dto.AuthResponse;
+import ElSilencioKoffee_Backend.auth.dto.LoginRequest;
+import ElSilencioKoffee_Backend.auth.dto.RegisterRequest;
+import ElSilencioKoffee_Backend.auth.services.IAuthService;
+import ElSilencioKoffee_Backend.roles.entities.Rol;
+import ElSilencioKoffee_Backend.roles.repositories.RolRepository;
+import ElSilencioKoffee_Backend.userroles.entities.UsuarioRol;
+import ElSilencioKoffee_Backend.userroles.entities.UsuarioRolId;
+import ElSilencioKoffee_Backend.userroles.repositories.UsuarioRolRepository;
+import ElSilencioKoffee_Backend.users.entities.Usuario;
+import ElSilencioKoffee_Backend.users.repositories.UsuarioRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

@@ -1,13 +1,13 @@
 package ElSilencioKoffee_Backend;
 
-import ElSilencioKoffee_Backend.dto.OrderCreateItemRequest;
-import ElSilencioKoffee_Backend.entities.Order;
-import ElSilencioKoffee_Backend.entities.OrderStatus;
-import ElSilencioKoffee_Backend.entities.Product;
-import ElSilencioKoffee_Backend.entities.Usuario;
-import ElSilencioKoffee_Backend.repository.OrderRepository;
-import ElSilencioKoffee_Backend.repository.UsuarioRepository;
-import ElSilencioKoffee_Backend.services.IOrderService;
+import ElSilencioKoffee_Backend.orders.dto.OrderCreateItemRequest;
+import ElSilencioKoffee_Backend.orders.entities.Order;
+import ElSilencioKoffee_Backend.orders.entities.OrderStatus;
+import ElSilencioKoffee_Backend.orders.repositories.OrderRepository;
+import ElSilencioKoffee_Backend.orders.services.IOrderService;
+import ElSilencioKoffee_Backend.products.entities.Product;
+import ElSilencioKoffee_Backend.users.entities.Usuario;
+import ElSilencioKoffee_Backend.users.repositories.UsuarioRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

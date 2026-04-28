@@ -1,6 +1,6 @@
 package ElSilencioKoffee_Backend;
 
-import ElSilencioKoffee_Backend.services.IOrderService;
+import ElSilencioKoffee_Backend.orders.services.IOrderService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
