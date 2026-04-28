@@ -1,0 +1,12 @@
+CREATE TABLE sections (
+    id_section INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(80) NOT NULL,
+    location VARCHAR(150) NOT NULL,
+    capacity INT UNSIGNED
+);
+
+CREATE TABLE varieties (
+    id_variety INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT
+);

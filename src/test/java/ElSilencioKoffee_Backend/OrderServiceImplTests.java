@@ -6,12 +6,12 @@ import ElSilencioKoffee_Backend.entities.OrderStatus;
 import ElSilencioKoffee_Backend.entities.Product;
 import ElSilencioKoffee_Backend.entities.Usuario;
 import ElSilencioKoffee_Backend.repository.OrderRepository;
-import ElSilencioKoffee_Backend.repository.ProductRepository;
 import ElSilencioKoffee_Backend.repository.UsuarioRepository;
 import ElSilencioKoffee_Backend.services.IOrderService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -36,7 +36,7 @@ class OrderServiceImplTests {
     private OrderRepository orderRepository;
 
     @Autowired
-    private ProductRepository productRepository;
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void createOrderBuildsTotalFromProductsAndPersistsDetails() {
@@ -51,13 +51,13 @@ class OrderServiceImplTests {
         productOne.setId(1L);
         productOne.setName("Ethiopian Yirgacheffe");
         productOne.setPrice(new BigDecimal("26.00"));
-        productRepository.save(productOne);
+        persistProduct(productOne, 1, 1, 1, 1);
 
         Product productTwo = new Product();
         productTwo.setId(2L);
         productTwo.setName("Espresso Capsules");
         productTwo.setPrice(new BigDecimal("18.00"));
-        productRepository.save(productTwo);
+        persistProduct(productTwo, 2, 2, 2, 2);
 
         OrderCreateItemRequest firstItem = new OrderCreateItemRequest();
         firstItem.setProductId(1L);
@@ -183,5 +183,54 @@ class OrderServiceImplTests {
         order.setTotalAmount(new BigDecimal("18.00"));
 
         return orderRepository.save(order);
+    }
+
+    private void persistProduct(
+            Product product,
+            int sectionId,
+            int varietyId,
+            int productionId,
+            int presentationId
+    ) {
+        jdbcTemplate.update(
+                "INSERT INTO sections (id_section, name, location, capacity) VALUES (?, ?, ?, ?)",
+                sectionId,
+                "Section " + sectionId,
+                "Location " + sectionId,
+                100
+        );
+        jdbcTemplate.update(
+                "INSERT INTO varieties (id_variety, name, description) VALUES (?, ?, ?)",
+                varietyId,
+                "Variety " + varietyId,
+                "Description " + varietyId
+        );
+        jdbcTemplate.update(
+                """
+                INSERT INTO production (id_production, id_section, date_collection, quantity_kg, id_variety)
+                VALUES (?, ?, DATE '2026-01-01', ?, ?)
+                """,
+                productionId,
+                sectionId,
+                new BigDecimal("25.00"),
+                varietyId
+        );
+        jdbcTemplate.update(
+                "INSERT INTO product_presentations (id_presentation, name, description) VALUES (?, ?, ?)",
+                presentationId,
+                "Presentation " + presentationId,
+                "Description " + presentationId
+        );
+        jdbcTemplate.update(
+                """
+                INSERT INTO products (id_product, name, price, id_presentation, id_production)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                product.getId(),
+                product.getName(),
+                product.getPrice(),
+                presentationId,
+                productionId
+        );
     }
 }
