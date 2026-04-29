@@ -86,9 +86,9 @@ class InventoryServiceImplTests {
         Product product = createProduct(1, "Castillo");
         Inventory inventory = createInventory(product, 11);
 
-        InventoryResponse response = inventoryService.findById(inventory.getId());
+        InventoryResponse response = inventoryService.findById(inventory.getId().longValue());
 
-        assertEquals(inventory.getId(), response.getId());
+        assertEquals(inventory.getId().longValue(), response.getId());
         assertEquals(product.getId(), response.getProductId());
         assertEquals(11, response.getStockQuantity());
     }
@@ -100,7 +100,7 @@ class InventoryServiceImplTests {
         createUser("admin-increase", "increase@example.com");
 
         InventoryResponse response = inventoryService.increaseStock(
-                inventory.getId(),
+                inventory.getId().longValue(),
                 stockRequest(6, null, null),
                 "admin-increase"
         );
@@ -121,13 +121,13 @@ class InventoryServiceImplTests {
         createUser("admin-decrease", "decrease@example.com");
 
         InventoryResponse response = inventoryService.decreaseStock(
-                inventory.getId(),
+                inventory.getId().longValue(),
                 stockRequest(5, 77L, InventoryReferenceType.ORDER),
                 "admin-decrease"
         );
 
         assertEquals(7, response.getStockQuantity());
-        List<InventoryMovementResponse> movements = inventoryService.findMovements(inventory.getId());
+        List<InventoryMovementResponse> movements = inventoryService.findMovements(inventory.getId().longValue());
         assertEquals(1, movements.size());
         assertEquals(InventoryMovementType.OUT, movements.getFirst().getMovementType());
         assertEquals(new BigDecimal("5.00"), movements.getFirst().getQuantity());
@@ -144,7 +144,7 @@ class InventoryServiceImplTests {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> inventoryService.decreaseStock(
-                        inventory.getId(),
+                        inventory.getId().longValue(),
                         stockRequest(3, null, null),
                         "admin-stock"
                 )
@@ -163,7 +163,7 @@ class InventoryServiceImplTests {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> inventoryService.increaseStock(
-                        inventory.getId(),
+                        inventory.getId().longValue(),
                         stockRequest(0, null, null),
                         "admin-quantity"
                 )
@@ -183,7 +183,7 @@ class InventoryServiceImplTests {
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> inventoryService.registerMovement(inventory.getId(), request, "admin-movement")
+                () -> inventoryService.registerMovement(inventory.getId().longValue(), request, "admin-movement")
         );
 
         assertEquals("Movement type is required", exception.getMessage());
@@ -200,10 +200,10 @@ class InventoryServiceImplTests {
         request.setQuantity(4);
         request.setReferenceType(InventoryReferenceType.MANUAL);
 
-        InventoryResponse response = inventoryService.registerMovement(inventory.getId(), request, "admin-adjust");
+        InventoryResponse response = inventoryService.registerMovement(inventory.getId().longValue(), request, "admin-adjust");
 
         assertEquals(4, response.getStockQuantity());
-        List<InventoryMovementResponse> movements = inventoryService.findMovements(inventory.getId());
+        List<InventoryMovementResponse> movements = inventoryService.findMovements(inventory.getId().longValue());
         assertEquals(1, movements.size());
         assertEquals(InventoryMovementType.ADJUSTMENT, movements.getFirst().getMovementType());
         assertEquals(new BigDecimal("5.00"), movements.getFirst().getQuantity());
@@ -240,8 +240,8 @@ class InventoryServiceImplTests {
         product.setName(name);
         product.setImageUrl("https://cdn.example.com/" + name.toLowerCase().replace(" ", "-") + ".png");
         product.setPrice(new BigDecimal("20.00"));
-        product.setPresentationId((long) key);
-        product.setProductionId((long) key);
+        product.setPresentationId(key);
+        product.setProductionId(key);
         return productRepository.save(product);
     }
 

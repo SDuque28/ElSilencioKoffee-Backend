@@ -34,9 +34,9 @@ public class Product {
     private BigDecimal price;
 
     @Column(name = "id_presentation", nullable = false)
-    private Long presentationId;
+    private Integer presentationId;
 
     @Column(name = "id_production", nullable = false)
-    private Long productionId;
+    private Integer productionId;
 }
 

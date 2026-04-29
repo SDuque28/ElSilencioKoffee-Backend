@@ -78,7 +78,7 @@ public class ProductionServiceImpl implements IProductionService {
             throw new IllegalArgumentException("Production ID must be greater than 0");
         }
 
-        return productionRepository.findById(id)
+        return productionRepository.findById(Math.toIntExact(id))
                 .orElseThrow(() -> new NoSuchElementException("Production not found: " + id));
     }
 
@@ -89,14 +89,14 @@ public class ProductionServiceImpl implements IProductionService {
         production.setQuantityKg(requirePositiveQuantity(request.getQuantityKg()));
     }
 
-    private Long requireReferenceId(Long id, String label) {
+    private Integer requireReferenceId(Long id, String label) {
         if (id == null) {
             throw new IllegalArgumentException(label + " is required");
         }
         if (id <= 0) {
             throw new IllegalArgumentException(label + " must be greater than 0");
         }
-        return id;
+        return Math.toIntExact(id);
     }
 
     private LocalDate requireCollectionDate(LocalDate collectionDate) {
@@ -116,23 +116,23 @@ public class ProductionServiceImpl implements IProductionService {
         return quantityKg;
     }
 
-    private ProductionSection findSection(Long id) {
+    private ProductionSection findSection(Integer id) {
         return sectionRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Section not found: " + id));
+                .orElseThrow(() -> new NoSuchElementException("Section not found: " + id.longValue()));
     }
 
-    private ProductionVariety findVariety(Long id) {
+    private ProductionVariety findVariety(Integer id) {
         return varietyRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Variety not found: " + id));
+                .orElseThrow(() -> new NoSuchElementException("Variety not found: " + id.longValue()));
     }
 
     private ProductionResponse toResponse(Production production) {
         ProductionResponse response = new ProductionResponse();
-        response.setId(production.getId());
-        response.setSectionId(production.getSection().getId());
+        response.setId(production.getId().longValue());
+        response.setSectionId(production.getSection().getId().longValue());
         response.setSectionName(production.getSection().getName());
         response.setSectionLocation(production.getSection().getLocation());
-        response.setVarietyId(production.getVariety().getId());
+        response.setVarietyId(production.getVariety().getId().longValue());
         response.setVarietyName(production.getVariety().getName());
         response.setQuantityKg(production.getQuantityKg());
         response.setCollectionDate(production.getCollectionDate());

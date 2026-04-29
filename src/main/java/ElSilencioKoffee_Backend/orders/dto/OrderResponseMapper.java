@@ -37,8 +37,10 @@ public final class OrderResponseMapper {
     public static OrderDetailResponse toDetailResponse(OrderDetail orderDetail) {
         OrderDetailResponse response = new OrderDetailResponse();
         response.setDetailId(orderDetail.getId());
-        response.setProductId(orderDetail.getProduct().getId());
-        response.setProductName(orderDetail.getProduct().getName());
+        if (orderDetail.getProduct() != null) {
+            response.setProductId(orderDetail.getProduct().getId());
+            response.setProductName(orderDetail.getProduct().getName());
+        }
         response.setQuantity(orderDetail.getQuantity().intValueExact());
         response.setUnitPrice(orderDetail.getUnitPrice());
         response.setSubtotal(orderDetail.getUnitPrice().multiply(orderDetail.getQuantity()));

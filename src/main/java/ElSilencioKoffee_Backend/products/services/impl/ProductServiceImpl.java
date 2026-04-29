@@ -139,14 +139,14 @@ public class ProductServiceImpl implements IProductService {
         return price;
     }
 
-    private Long validateReferenceId(Long id, String label) {
+    private Integer validateReferenceId(Long id, String label) {
         if (id == null) {
             throw new IllegalArgumentException(label + " is required");
         }
         if (id <= 0) {
             throw new IllegalArgumentException(label + " must be greater than 0");
         }
-        return id;
+        return Math.toIntExact(id);
     }
 
     private ProductResponse toResponse(Product product) {
@@ -155,8 +155,8 @@ public class ProductServiceImpl implements IProductService {
         response.setName(product.getName());
         response.setImageUrl(product.getImageUrl());
         response.setPrice(product.getPrice());
-        response.setPresentationId(product.getPresentationId());
-        response.setProductionId(product.getProductionId());
+        response.setPresentationId(product.getPresentationId().longValue());
+        response.setProductionId(product.getProductionId().longValue());
         return response;
     }
 }

@@ -59,7 +59,7 @@ public class InventoryServiceImpl implements IInventoryService {
     public List<InventoryMovementResponse> findMovements(Long inventoryId) {
         Inventory inventory = findInventory(inventoryId);
         return inventoryMovementRepository.findByProductIdOrderByCreatedAtDescIdDesc(inventory.getProduct().getId()).stream()
-                .map(movement -> toMovementResponse(inventory.getId(), movement))
+                .map(movement -> toMovementResponse(inventory.getId().longValue(), movement))
                 .toList();
     }
 
@@ -102,7 +102,7 @@ public class InventoryServiceImpl implements IInventoryService {
             throw new IllegalArgumentException("Inventory ID must be greater than 0");
         }
 
-        return inventoryRepository.findById(inventoryId)
+        return inventoryRepository.findById(Math.toIntExact(inventoryId))
                 .orElseThrow(() -> new NoSuchElementException("Inventory not found: " + inventoryId));
     }
 
@@ -229,7 +229,7 @@ public class InventoryServiceImpl implements IInventoryService {
 
     private InventoryResponse toResponse(Inventory inventory) {
         InventoryResponse response = new InventoryResponse();
-        response.setId(inventory.getId());
+        response.setId(inventory.getId().longValue());
         response.setProductId(inventory.getProduct().getId());
         response.setProductName(inventory.getProduct().getName());
         response.setProductImageUrl(inventory.getProduct().getImageUrl());

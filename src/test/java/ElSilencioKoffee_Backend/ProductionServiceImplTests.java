@@ -42,7 +42,7 @@ class ProductionServiceImplTests {
 
         ProductionResponse response = productionService.create(createRequest(1L, 1L, "42.50", LocalDate.of(2026, 4, 20)));
 
-        assertTrue(productionRepository.existsById(response.getId()));
+        assertTrue(productionRepository.existsById(response.getId().intValue()));
         assertEquals(1L, response.getSectionId());
         assertEquals("Section 1", response.getSectionName());
         assertEquals(1L, response.getVarietyId());
@@ -75,9 +75,9 @@ class ProductionServiceImplTests {
         seedVariety(1);
         Production created = productionRepository.save(toEntity(1L, 1L, "30.00", LocalDate.of(2026, 4, 5)));
 
-        ProductionResponse response = productionService.findById(created.getId());
+        ProductionResponse response = productionService.findById(created.getId().longValue());
 
-        assertEquals(created.getId(), response.getId());
+        assertEquals(created.getId().longValue(), response.getId());
         assertEquals(1L, response.getSectionId());
         assertEquals(1L, response.getVarietyId());
         assertEquals(new BigDecimal("30.00"), response.getQuantityKg());
@@ -97,9 +97,9 @@ class ProductionServiceImplTests {
         request.setQuantityKg(new BigDecimal("55.75"));
         request.setCollectionDate(LocalDate.of(2026, 4, 22));
 
-        ProductionResponse response = productionService.update(created.getId(), request);
+        ProductionResponse response = productionService.update(created.getId().longValue(), request);
 
-        assertEquals(created.getId(), response.getId());
+        assertEquals(created.getId().longValue(), response.getId());
         assertEquals(2L, response.getSectionId());
         assertEquals("Section 2", response.getSectionName());
         assertEquals(2L, response.getVarietyId());
@@ -114,7 +114,7 @@ class ProductionServiceImplTests {
         seedVariety(1);
         Production created = productionRepository.save(toEntity(1L, 1L, "30.00", LocalDate.of(2026, 4, 5)));
 
-        productionService.delete(created.getId());
+        productionService.delete(created.getId().longValue());
 
         assertFalse(productionRepository.existsById(created.getId()));
     }
@@ -178,7 +178,7 @@ class ProductionServiceImplTests {
     private Production toEntity(Long sectionId, Long varietyId, String quantityKg, LocalDate collectionDate) {
         ProductionCreateRequest request = createRequest(sectionId, varietyId, quantityKg, collectionDate);
         ProductionResponse created = productionService.create(request);
-        return productionRepository.findById(created.getId()).orElseThrow();
+        return productionRepository.findById(created.getId().intValue()).orElseThrow();
     }
 
     private void seedSection(int id) {

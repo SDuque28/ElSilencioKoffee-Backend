@@ -190,8 +190,8 @@ class CartServiceImplTests {
         Product product = new Product();
         product.setName(name);
         product.setPrice(new BigDecimal(price));
-        product.setPresentationId((long) key);
-        product.setProductionId((long) key);
+        product.setPresentationId(key);
+        product.setProductionId(key);
         return productRepository.save(product);
     }
 

@@ -55,7 +55,7 @@ public class EnvironmentMetricServiceImpl implements IEnvironmentMetricService {
                 if (sectionId <= 0) {
                     throw new IllegalArgumentException("Section ID must be greater than 0");
                 }
-                predicates.add(criteriaBuilder.equal(root.get("section").get("id"), sectionId));
+                predicates.add(criteriaBuilder.equal(root.get("section").get("id"), Math.toIntExact(sectionId)));
             }
 
             if (fromDate != null) {
@@ -161,7 +161,7 @@ public class EnvironmentMetricServiceImpl implements IEnvironmentMetricService {
         if (sectionId <= 0) {
             throw new IllegalArgumentException("Section ID must be greater than 0");
         }
-        return sectionRepository.findById(sectionId)
+        return sectionRepository.findById(Math.toIntExact(sectionId))
                 .orElseThrow(() -> new NoSuchElementException("Section not found: " + sectionId));
     }
 
@@ -180,7 +180,7 @@ public class EnvironmentMetricServiceImpl implements IEnvironmentMetricService {
         response.setMeasuredAt(metric.getMeasuredAt());
 
         if (metric.getSection() != null) {
-            response.setSectionId(metric.getSection().getId());
+            response.setSectionId(metric.getSection().getId().longValue());
             response.setSectionName(metric.getSection().getName());
             response.setSectionLocation(metric.getSection().getLocation());
         }

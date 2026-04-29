@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
-public interface ProductionRepository extends JpaRepository<Production, Long> {
+public interface ProductionRepository extends JpaRepository<Production, Integer> {
 
     @Override
     @EntityGraph(attributePaths = {"section", "variety"})
@@ -19,5 +19,5 @@ public interface ProductionRepository extends JpaRepository<Production, Long> {
 
     @Override
     @EntityGraph(attributePaths = {"section", "variety"})
-    Optional<Production> findById(Long id);
+    Optional<Production> findById(Integer id);
 }

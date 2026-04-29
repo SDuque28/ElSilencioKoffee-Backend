@@ -20,7 +20,7 @@ public class ProductionSection {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_section")
-    private Long id;
+    private Integer id;
 
     @Column(nullable = false, length = 80)
     private String name;

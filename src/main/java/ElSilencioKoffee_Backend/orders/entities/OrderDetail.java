@@ -34,8 +34,8 @@ public class OrderDetail {
     @JoinColumn(name = "id_order", nullable = false)
     private Order order;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_product", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_product")
     private Product product;
 
     @Column(nullable = false, precision = 10, scale = 2)
