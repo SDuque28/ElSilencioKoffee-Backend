@@ -130,7 +130,7 @@ class OrderControllerDetailsTests {
         Order order = new Order();
         order.setId(orderId);
         order.setUsuario(usuario);
-        order.setStatus(OrderStatus.NON_PAID);
+        order.setStatus(OrderStatus.PENDING);
         order.setTotalAmount(new BigDecimal("70.00"));
         order.addOrderDetail(firstDetail);
         order.addOrderDetail(secondDetail);

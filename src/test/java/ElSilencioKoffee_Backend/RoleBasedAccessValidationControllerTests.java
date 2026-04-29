@@ -98,7 +98,7 @@ class RoleBasedAccessValidationControllerTests {
     @Test
     @WithMockUser(username = "customer-1", roles = "USER")
     void authenticatedUserCanAccessOwnOrdersRoute() throws Exception {
-        when(orderService.findOrdersByUsername("customer-1")).thenReturn(List.of(createOrder(10L, 7L, OrderStatus.NON_PAID)));
+        when(orderService.findOrdersByUsername("customer-1")).thenReturn(List.of(createOrder(10L, 7L, OrderStatus.PENDING)));
 
         mockMvc.perform(get("/users/me/orders"))
                 .andExpect(status().isOk())
@@ -125,7 +125,7 @@ class RoleBasedAccessValidationControllerTests {
     @WithMockUser(username = "customer-1", roles = "USER")
     void orderDetailUsesOwnershipScopedLookupForRegularUsers() throws Exception {
         when(orderService.findOrderByIdForUsername(eq(12L), eq("customer-1")))
-                .thenReturn(createOrder(12L, 5L, OrderStatus.NON_PAID));
+                .thenReturn(createOrder(12L, 5L, OrderStatus.PENDING));
 
         mockMvc.perform(get("/orders/12"))
                 .andExpect(status().isOk())
@@ -138,7 +138,7 @@ class RoleBasedAccessValidationControllerTests {
     @Test
     @WithMockUser(roles = "ADMIN")
     void orderDetailAllowsAdminLookupsAcrossUsers() throws Exception {
-        when(orderService.findOrderById(13L)).thenReturn(createOrder(13L, 21L, OrderStatus.NON_PAID));
+        when(orderService.findOrderById(13L)).thenReturn(createOrder(13L, 21L, OrderStatus.PENDING));
 
         mockMvc.perform(get("/orders/13"))
                 .andExpect(status().isOk())

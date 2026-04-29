@@ -1,5 +1,6 @@
 package ElSilencioKoffee_Backend.products.services.impl;
 
+import ElSilencioKoffee_Backend.inventory.repositories.InventoryRepository;
 import ElSilencioKoffee_Backend.products.dto.ProductCreateRequest;
 import ElSilencioKoffee_Backend.products.dto.ProductResponse;
 import ElSilencioKoffee_Backend.products.dto.ProductUpdateRequest;
@@ -24,6 +25,7 @@ public class ProductServiceImpl implements IProductService {
             "Product references a presentation or production record that does not exist";
 
     private final ProductRepository productRepository;
+    private final InventoryRepository inventoryRepository;
 
     @Override
     @Transactional
@@ -157,6 +159,11 @@ public class ProductServiceImpl implements IProductService {
         response.setPrice(product.getPrice());
         response.setPresentationId(product.getPresentationId().longValue());
         response.setProductionId(product.getProductionId().longValue());
+        response.setStockQuantity(
+                inventoryRepository.findByProductId(product.getId())
+                        .map(inventory -> inventory.getStockQuantity())
+                        .orElse(0)
+        );
         return response;
     }
 }

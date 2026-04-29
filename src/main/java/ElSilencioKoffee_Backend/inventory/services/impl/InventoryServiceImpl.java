@@ -11,6 +11,8 @@ import ElSilencioKoffee_Backend.inventory.entities.InventoryReferenceType;
 import ElSilencioKoffee_Backend.inventory.repositories.InventoryMovementRepository;
 import ElSilencioKoffee_Backend.inventory.repositories.InventoryRepository;
 import ElSilencioKoffee_Backend.inventory.services.IInventoryService;
+import ElSilencioKoffee_Backend.orders.entities.Order;
+import ElSilencioKoffee_Backend.orders.entities.OrderDetail;
 import ElSilencioKoffee_Backend.products.entities.Product;
 import ElSilencioKoffee_Backend.products.repositories.ProductRepository;
 import ElSilencioKoffee_Backend.users.entities.Usuario;
@@ -21,7 +23,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 @Service
@@ -95,6 +99,66 @@ public class InventoryServiceImpl implements IInventoryService {
         }
 
         return toResponse(inventory);
+    }
+
+    @Override
+    @Transactional
+    public void ensureSufficientStock(Map<Long, Integer> requestedQuantities) {
+        for (Map.Entry<Long, Integer> entry : requestedQuantities.entrySet()) {
+            Long productId = entry.getKey();
+            int requestedQuantity = requirePositiveQuantity(entry.getValue(), "Quantity");
+            Product product = findProduct(productId);
+            Inventory inventory = findOrCreateInventory(product);
+
+            if (inventory.getStockQuantity() < requestedQuantity) {
+                throw new IllegalArgumentException(
+                        "Insufficient stock for product " + product.getName() + ". Available: "
+                                + inventory.getStockQuantity() + ", requested: " + requestedQuantity
+                );
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void consumeStockForOrder(Order order, String username) {
+        if (order == null || order.getId() == null) {
+            throw new IllegalArgumentException("Order is required");
+        }
+
+        Usuario actor = findUserByUsername(username);
+        Map<Long, Integer> quantitiesByProductId = new LinkedHashMap<>();
+
+        for (OrderDetail detail : order.getOrderDetails()) {
+            if (detail.getProduct() == null || detail.getProduct().getId() == null) {
+                throw new IllegalArgumentException("Order detail product is required");
+            }
+
+            quantitiesByProductId.merge(
+                    detail.getProduct().getId(),
+                    detail.getQuantity().intValueExact(),
+                    Integer::sum
+            );
+        }
+
+        ensureSufficientStock(quantitiesByProductId);
+
+        for (Map.Entry<Long, Integer> entry : quantitiesByProductId.entrySet()) {
+            Product product = findProduct(entry.getKey());
+            Inventory inventory = findOrCreateInventory(product);
+            int quantity = entry.getValue();
+
+            inventory.setStockQuantity(inventory.getStockQuantity() - quantity);
+            inventoryRepository.save(inventory);
+            recordMovement(
+                    inventory,
+                    InventoryMovementType.OUT,
+                    quantity,
+                    order.getId(),
+                    InventoryReferenceType.ORDER,
+                    actor
+            );
+        }
     }
 
     private Inventory findInventory(Long inventoryId) {

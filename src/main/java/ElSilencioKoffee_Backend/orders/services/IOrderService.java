@@ -24,6 +24,8 @@ public interface IOrderService {
 
     Order findOrderByIdForUsername(Long id, String username);
 
-    Order updateStatus(Long id, OrderStatus status);
+    Order updateStatus(Long id, OrderStatus status, String actorUsername);
+
+    Order payOrder(Long id, String username, boolean isAdmin);
 }
 

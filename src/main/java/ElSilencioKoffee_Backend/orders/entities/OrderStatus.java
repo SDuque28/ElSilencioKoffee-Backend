@@ -9,8 +9,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum OrderStatus {
 
+    PENDING("PENDING"),
     PAID("PAID"),
-    NON_PAID("NON PAID");
+    ;
 
     private final String databaseValue;
 
@@ -23,6 +24,11 @@ public enum OrderStatus {
     public static OrderStatus fromValue(String value) {
         if (value == null || value.isBlank()) {
             return null;
+        }
+
+        String trimmedValue = value.trim();
+        if ("NON PAID".equalsIgnoreCase(trimmedValue) || "NON_PAID".equalsIgnoreCase(trimmedValue)) {
+            return PENDING;
         }
 
         String normalized = value.trim()

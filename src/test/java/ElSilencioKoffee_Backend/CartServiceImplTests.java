@@ -192,7 +192,9 @@ class CartServiceImplTests {
         product.setPrice(new BigDecimal(price));
         product.setPresentationId(key);
         product.setProductionId(key);
-        return productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
+        createInventory(savedProduct.getId(), 50);
+        return savedProduct;
     }
 
     private AddCartItemRequest addRequest(Long productId, Integer quantity) {
@@ -231,6 +233,14 @@ class CartServiceImplTests {
                 key,
                 "Presentation " + key,
                 "Description " + key
+        );
+    }
+
+    private void createInventory(Long productId, int stockQuantity) {
+        jdbcTemplate.update(
+                "INSERT INTO inventory (id_product, stock_quantity) VALUES (?, ?)",
+                productId,
+                stockQuantity
         );
     }
 }

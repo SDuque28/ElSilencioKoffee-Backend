@@ -41,7 +41,7 @@ public class Order {
 
     @Convert(converter = OrderStatusConverter.class)
     @JdbcTypeCode(SqlTypes.ENUM)
-    @Column(nullable = false, columnDefinition = "ENUM('PAID', 'NON PAID')")
+    @Column(nullable = false, columnDefinition = "ENUM('PENDING', 'PAID')")
     private OrderStatus status;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)

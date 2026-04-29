@@ -6,6 +6,7 @@ import ElSilencioKoffee_Backend.orders.entities.OrderDetail;
 import ElSilencioKoffee_Backend.orders.entities.OrderStatus;
 import ElSilencioKoffee_Backend.orders.repositories.OrderRepository;
 import ElSilencioKoffee_Backend.orders.services.IOrderService;
+import ElSilencioKoffee_Backend.inventory.services.IInventoryService;
 import ElSilencioKoffee_Backend.products.entities.Product;
 import ElSilencioKoffee_Backend.products.repositories.ProductRepository;
 import ElSilencioKoffee_Backend.users.entities.Usuario;
@@ -30,6 +31,7 @@ public class OrderServiceImpl implements IOrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UsuarioRepository usuarioRepository;
+    private final IInventoryService inventoryService;
 
     @Override
     @Transactional
@@ -37,10 +39,11 @@ public class OrderServiceImpl implements IOrderService {
         Map<Long, Integer> normalizedItems = normalizeItems(items);
         Usuario usuario = findUserByUsername(username);
         Map<Long, Product> productsById = findProductsById(normalizedItems.keySet());
+        inventoryService.ensureSufficientStock(normalizedItems);
 
         Order order = new Order();
         order.setUsuario(usuario);
-        order.setStatus(OrderStatus.NON_PAID);
+        order.setStatus(OrderStatus.PENDING);
         order.setTotalAmount(calculateAndAttachOrderDetails(order, normalizedItems, productsById));
 
         return orderRepository.save(order);
@@ -92,7 +95,7 @@ public class OrderServiceImpl implements IOrderService {
 
     @Override
     @Transactional
-    public Order updateStatus(Long id, OrderStatus status) {
+    public Order updateStatus(Long id, OrderStatus status, String actorUsername) {
         if (status == null) {
             throw new IllegalArgumentException("Order status is required");
         }
@@ -100,8 +103,26 @@ public class OrderServiceImpl implements IOrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + id));
 
-        validateStatusTransition(order.getStatus(), status);
-        order.setStatus(status);
+        return performStatusTransition(order, status, actorUsername);
+    }
+
+    @Override
+    @Transactional
+    public Order payOrder(Long id, String username, boolean isAdmin) {
+        Order order = isAdmin
+                ? findOrderById(id)
+                : findOrderByIdForUsername(id, username);
+        return performStatusTransition(order, OrderStatus.PAID, username);
+    }
+
+    private Order performStatusTransition(Order order, OrderStatus nextStatus, String actorUsername) {
+        validateStatusTransition(order.getStatus(), nextStatus);
+
+        if (nextStatus == OrderStatus.PAID) {
+            inventoryService.consumeStockForOrder(order, actorUsername);
+        }
+
+        order.setStatus(nextStatus);
         return orderRepository.save(order);
     }
 
@@ -189,7 +210,7 @@ public class OrderServiceImpl implements IOrderService {
             );
         }
 
-        if (currentStatus == OrderStatus.NON_PAID && nextStatus == OrderStatus.PAID) {
+        if (currentStatus == OrderStatus.PENDING && nextStatus == OrderStatus.PAID) {
             return;
         }
 

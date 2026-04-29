@@ -9,6 +9,7 @@ import ElSilencioKoffee_Backend.cart.entities.CartItem;
 import ElSilencioKoffee_Backend.cart.repositories.CartItemRepository;
 import ElSilencioKoffee_Backend.cart.repositories.CartRepository;
 import ElSilencioKoffee_Backend.cart.services.ICartService;
+import ElSilencioKoffee_Backend.inventory.services.IInventoryService;
 import ElSilencioKoffee_Backend.products.entities.Product;
 import ElSilencioKoffee_Backend.products.repositories.ProductRepository;
 import ElSilencioKoffee_Backend.users.entities.Usuario;
@@ -20,17 +21,21 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class CartServiceImpl implements ICartService {
+public class
+
+CartServiceImpl implements ICartService {
 
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final UsuarioRepository usuarioRepository;
+    private final IInventoryService inventoryService;
 
     @Override
     @Transactional(readOnly = true)
@@ -53,9 +58,12 @@ public class CartServiceImpl implements ICartService {
         Optional<CartItem> existingItem = cartItemRepository.findByCartIdAndProductId(cart.getId(), productId);
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
-            item.setQuantity(item.getQuantity() + quantity);
+            int nextQuantity = item.getQuantity() + quantity;
+            inventoryService.ensureSufficientStock(Map.of(productId, nextQuantity));
+            item.setQuantity(nextQuantity);
             cartItemRepository.save(item);
         } else {
+            inventoryService.ensureSufficientStock(Map.of(productId, quantity));
             CartItem item = new CartItem();
             item.setProduct(product);
             item.setQuantity(quantity);
@@ -69,7 +77,9 @@ public class CartServiceImpl implements ICartService {
     @Transactional
     public CartResponse updateItem(String username, Long itemId, UpdateCartItemRequest request) {
         CartItem item = findOwnedItem(itemId, username);
-        item.setQuantity(requireQuantity(request.getQuantity()));
+        int nextQuantity = requireQuantity(request.getQuantity());
+        inventoryService.ensureSufficientStock(Map.of(item.getProduct().getId(), nextQuantity));
+        item.setQuantity(nextQuantity);
         cartItemRepository.save(item);
         return toResponse(item.getCart());
     }
