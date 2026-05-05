@@ -147,7 +147,7 @@ class CartServiceImplTests {
     }
 
     @Test
-    void clearCartDeletesPersistedCartState() {
+    void clearCartRemovesItemsButPreservesPersistentCart() {
         Usuario usuario = createUser("cart-clear-user");
         Product product = createProduct(1, "Clear Coffee", "9.00");
         cartService.addItem(usuario.getUsername(), addRequest(product.getId(), 4));
@@ -157,7 +157,8 @@ class CartServiceImplTests {
         assertEquals(usuario.getId(), cleared.getUserId());
         assertEquals(0, cleared.getTotalItems());
         assertTrue(cleared.getItems().isEmpty());
-        assertFalse(cartRepository.findByUsuarioUsername(usuario.getUsername()).isPresent());
+        assertTrue(cartRepository.findByUsuarioUsername(usuario.getUsername()).isPresent());
+        assertTrue(cartRepository.findByUsuarioUsername(usuario.getUsername()).orElseThrow().getItems().isEmpty());
     }
 
     @Test

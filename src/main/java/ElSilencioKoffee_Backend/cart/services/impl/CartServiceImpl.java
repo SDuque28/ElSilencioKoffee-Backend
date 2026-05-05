@@ -103,8 +103,9 @@ CartServiceImpl implements ICartService {
             return emptyCartResponse(usuario);
         }
 
-        cartRepository.delete(cart.get());
-        return emptyCartResponse(usuario);
+        Cart persistedCart = cart.get();
+        persistedCart.getItems().clear();
+        return toResponse(cartRepository.save(persistedCart));
     }
 
     private Usuario findUserByUsername(String username) {
