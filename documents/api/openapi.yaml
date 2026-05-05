@@ -11,6 +11,8 @@ info:
     - roles
     - user-role assignments
     - orders
+    - checkout
+    - admin order detail views
 
     Important notes:
     - This specification documents the current live backend behavior, which is still exposed on unversioned root-level paths such as `/auth` and `/orders`.
@@ -31,6 +33,8 @@ tags:
     description: User-to-role assignment endpoints
   - name: Orders
     description: Order creation and retrieval endpoints
+  - name: Checkout
+    description: Authenticated checkout, payment simulation, and delivery creation
 paths:
   /auth/register:
     post:
@@ -898,6 +902,89 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiMessageError'
+  /api/v1/checkout:
+    post:
+      tags: [Checkout]
+      summary: Checkout the authenticated cart
+      description: |
+        Creates a paid order from the authenticated user's persistent cart.
+
+        Backend behavior:
+        - resolves the user from the JWT
+        - loads the user's persisted cart
+        - recalculates totals from current product prices
+        - validates stock
+        - validates payment simulation input
+        - stores only masked payment summary data
+        - creates a delivery order with `OUT_FOR_SHIPMENT`
+        - clears the cart after success
+      operationId: checkoutCart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '201':
+          description: Checkout completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        '400':
+          description: Invalid checkout, payment, or stock request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiMessageError'
+        '401':
+          description: Missing or invalid authentication token
+  /api/v1/admin/orders:
+    get:
+      tags: [Orders]
+      summary: List all orders with purchase detail
+      description: Returns full purchase detail for administrators.
+      operationId: listAdminOrders
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Orders returned successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminOrderDetailResponse'
+        '401':
+          description: Missing or invalid authentication token
+        '403':
+          description: Authenticated user lacks administrator role
+  /api/v1/admin/orders/{id}:
+    get:
+      tags: [Orders]
+      summary: Get full order detail for administrators
+      operationId: getAdminOrderById
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdPath'
+      responses:
+        '200':
+          description: Order returned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrderDetailResponse'
+        '401':
+          description: Missing or invalid authentication token
+        '403':
+          description: Authenticated user lacks administrator role
+        '404':
+          description: Order not found
 components:
   securitySchemes:
     bearerAuth:
@@ -1203,6 +1290,169 @@ components:
           example: 54000.0
         status:
           $ref: '#/components/schemas/OrderStatus'
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        shippingInformation:
+          $ref: '#/components/schemas/ShippingInformationResponse'
+        payment:
+          $ref: '#/components/schemas/PaymentSummaryResponse'
+        deliveryOrder:
+          $ref: '#/components/schemas/DeliveryOrderResponse'
+        customer:
+          $ref: '#/components/schemas/OrderCustomerResponse'
+    AdminOrderDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/OrderResponse'
+    OrderItemResponse:
+      type: object
+      properties:
+        detailId:
+          type: integer
+          format: int64
+        productId:
+          type: integer
+          format: int64
+          nullable: true
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+          format: double
+        subtotal:
+          type: number
+          format: double
+    OrderCustomerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+    ShippingInformationRequest:
+      type: object
+      required: [address, country, city, neighborhood]
+      properties:
+        address:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        neighborhood:
+          type: string
+        referenceDetails:
+          type: string
+          nullable: true
+    ShippingInformationResponse:
+      type: object
+      properties:
+        address:
+          type: string
+        country:
+          type: string
+        city:
+          type: string
+        neighborhood:
+          type: string
+        referenceDetails:
+          type: string
+          nullable: true
+    PaymentSimulationRequest:
+      type: object
+      required: [paymentMethod, cardholderName, cardNumber, expirationDate, cvv]
+      properties:
+        paymentMethod:
+          type: string
+          enum: [CREDIT_CARD, DEBIT_CARD]
+        cardholderName:
+          type: string
+        cardNumber:
+          type: string
+        expirationDate:
+          type: string
+        cvv:
+          type: string
+    PaymentSummaryResponse:
+      type: object
+      properties:
+        paymentMethod:
+          type: string
+          enum: [CREDIT_CARD, DEBIT_CARD]
+        maskedCardNumber:
+          type: string
+          example: '**** **** **** 4242'
+        status:
+          type: string
+          enum: [APPROVED, DECLINED]
+        transactionReference:
+          type: string
+        paidAt:
+          type: string
+          format: date-time
+    DeliveryOrderResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [PENDING, OUT_FOR_SHIPMENT, DELIVERED, CANCELLED]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CheckoutRequest:
+      type: object
+      required: [shippingInformation, payment]
+      properties:
+        shippingInformation:
+          $ref: '#/components/schemas/ShippingInformationRequest'
+        payment:
+          $ref: '#/components/schemas/PaymentSimulationRequest'
+        notes:
+          type: string
+          nullable: true
+    CheckoutResponse:
+      type: object
+      properties:
+        orderId:
+          type: integer
+          format: int64
+        orderDate:
+          type: string
+          format: date-time
+        orderStatus:
+          $ref: '#/components/schemas/OrderStatus'
+        totalAmount:
+          type: number
+          format: double
+        notes:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        shippingInformation:
+          $ref: '#/components/schemas/ShippingInformationResponse'
+        payment:
+          $ref: '#/components/schemas/PaymentSummaryResponse'
+        deliveryOrder:
+          $ref: '#/components/schemas/DeliveryOrderResponse'
     OrderPage:
       type: object
       required: [content, totalElements, totalPages, size, number, first, last, empty, numberOfElements]

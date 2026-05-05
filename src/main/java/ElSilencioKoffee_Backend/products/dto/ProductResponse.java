@@ -17,4 +17,5 @@ public class ProductResponse {
     private BigDecimal price;
     private Long presentationId;
     private Long productionId;
+    private Integer stockQuantity;
 }

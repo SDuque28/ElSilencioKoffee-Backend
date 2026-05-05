@@ -7,11 +7,12 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum OrderStatus {
+public enum DeliveryStatus {
 
     PENDING("PENDING"),
-    PAID("PAID"),
-    ;
+    OUT_FOR_SHIPMENT("OUT_FOR_SHIPMENT"),
+    DELIVERED("DELIVERED"),
+    CANCELLED("CANCELLED");
 
     private final String databaseValue;
 
@@ -21,14 +22,9 @@ public enum OrderStatus {
     }
 
     @JsonCreator
-    public static OrderStatus fromValue(String value) {
+    public static DeliveryStatus fromValue(String value) {
         if (value == null || value.isBlank()) {
             return null;
-        }
-
-        String trimmedValue = value.trim();
-        if ("NON PAID".equalsIgnoreCase(trimmedValue) || "NON_PAID".equalsIgnoreCase(trimmedValue)) {
-            return PENDING;
         }
 
         String normalized = value.trim()
@@ -36,13 +32,12 @@ public enum OrderStatus {
                 .replace('-', '_')
                 .replace(' ', '_');
 
-        for (OrderStatus status : values()) {
+        for (DeliveryStatus status : values()) {
             if (status.name().equals(normalized)) {
                 return status;
             }
         }
 
-        throw new IllegalArgumentException("Invalid order status: " + value);
+        throw new IllegalArgumentException("Invalid delivery status: " + value);
     }
 }
-

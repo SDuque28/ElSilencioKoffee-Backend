@@ -19,6 +19,11 @@ public class OrderResponse {
     private LocalDateTime orderDate;
     private BigDecimal totalAmount;
     private OrderStatus status;
+    private String notes;
     private List<OrderDetailResponse> items;
+    private ShippingInformationResponse shippingInformation;
+    private PaymentSummaryResponse payment;
+    private DeliveryOrderResponse deliveryOrder;
+    private OrderCustomerResponse customer;
 }
 

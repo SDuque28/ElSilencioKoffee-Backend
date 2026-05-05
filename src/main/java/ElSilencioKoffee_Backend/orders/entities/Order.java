@@ -21,7 +21,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = {"usuario", "orderDetails"})
+@ToString(exclude = {"usuario", "orderDetails", "shippingInformation", "payment", "deliveryOrder"})
 public class Order {
 
     @Id
@@ -41,11 +41,23 @@ public class Order {
 
     @Convert(converter = OrderStatusConverter.class)
     @JdbcTypeCode(SqlTypes.ENUM)
-    @Column(nullable = false, columnDefinition = "ENUM('PAID', 'NON PAID')")
+    @Column(nullable = false, columnDefinition = "ENUM('PENDING', 'PAID')")
     private OrderStatus status;
+
+    @Column(length = 500)
+    private String notes;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderDetail> orderDetails = new ArrayList<>();
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private OrderShippingInformation shippingInformation;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private OrderPayment payment;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private DeliveryOrder deliveryOrder;
 
     @PrePersist
     void prePersist() {
@@ -57,6 +69,27 @@ public class Order {
     public void addOrderDetail(OrderDetail orderDetail) {
         orderDetails.add(orderDetail);
         orderDetail.setOrder(this);
+    }
+
+    public void setShippingInformation(OrderShippingInformation shippingInformation) {
+        this.shippingInformation = shippingInformation;
+        if (shippingInformation != null) {
+            shippingInformation.setOrder(this);
+        }
+    }
+
+    public void setPayment(OrderPayment payment) {
+        this.payment = payment;
+        if (payment != null) {
+            payment.setOrder(this);
+        }
+    }
+
+    public void setDeliveryOrder(DeliveryOrder deliveryOrder) {
+        this.deliveryOrder = deliveryOrder;
+        if (deliveryOrder != null) {
+            deliveryOrder.setOrder(this);
+        }
     }
 }
 

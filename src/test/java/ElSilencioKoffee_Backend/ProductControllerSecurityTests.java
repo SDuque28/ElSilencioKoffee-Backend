@@ -52,7 +52,8 @@ class ProductControllerSecurityTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].name").value("Geisha"))
-                .andExpect(jsonPath("$[0].price").value(34.00));
+                .andExpect(jsonPath("$[0].price").value(34.00))
+                .andExpect(jsonPath("$[0].stockQuantity").value(0));
 
         verify(productService).findAll();
     }
@@ -109,6 +110,7 @@ class ProductControllerSecurityTests {
         response.setPrice(new BigDecimal(price));
         response.setPresentationId(1L);
         response.setProductionId(1L);
+        response.setStockQuantity(0);
         return response;
     }
 

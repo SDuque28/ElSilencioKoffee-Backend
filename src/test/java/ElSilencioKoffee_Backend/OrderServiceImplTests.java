@@ -1,7 +1,13 @@
 package ElSilencioKoffee_Backend;
 
+import ElSilencioKoffee_Backend.inventory.entities.InventoryMovement;
+import ElSilencioKoffee_Backend.inventory.entities.InventoryMovementType;
+import ElSilencioKoffee_Backend.inventory.entities.InventoryReferenceType;
+import ElSilencioKoffee_Backend.inventory.repositories.InventoryMovementRepository;
+import ElSilencioKoffee_Backend.inventory.repositories.InventoryRepository;
 import ElSilencioKoffee_Backend.orders.dto.OrderCreateItemRequest;
 import ElSilencioKoffee_Backend.orders.entities.Order;
+import ElSilencioKoffee_Backend.orders.entities.OrderDetail;
 import ElSilencioKoffee_Backend.orders.entities.OrderStatus;
 import ElSilencioKoffee_Backend.orders.repositories.OrderRepository;
 import ElSilencioKoffee_Backend.orders.services.IOrderService;
@@ -36,23 +42,22 @@ class OrderServiceImplTests {
     private OrderRepository orderRepository;
 
     @Autowired
+    private InventoryRepository inventoryRepository;
+
+    @Autowired
+    private InventoryMovementRepository inventoryMovementRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Test
     void createOrderBuildsTotalFromProductsAndPersistsDetails() {
         Usuario usuario = createUser("checkout-user", "checkout@example.com");
 
-        Product productOne = new Product();
-        productOne.setId(1L);
-        productOne.setName("Ethiopian Yirgacheffe");
-        productOne.setPrice(new BigDecimal("26.00"));
-        persistProduct(productOne, 1, 1, 1, 1);
-
-        Product productTwo = new Product();
-        productTwo.setId(2L);
-        productTwo.setName("Espresso Capsules");
-        productTwo.setPrice(new BigDecimal("18.00"));
-        persistProduct(productTwo, 2, 2, 2, 2);
+        Product productOne = createCatalogProduct(1L, "Ethiopian Yirgacheffe", "26.00");
+        Product productTwo = createCatalogProduct(2L, "Espresso Capsules", "18.00");
+        createInventory(productOne.getId(), 10);
+        createInventory(productTwo.getId(), 10);
 
         OrderCreateItemRequest firstItem = new OrderCreateItemRequest();
         firstItem.setProductId(1L);
@@ -65,7 +70,7 @@ class OrderServiceImplTests {
         Order order = orderService.createOrder(usuario.getUsername(), List.of(firstItem, secondItem));
 
         assertEquals(usuario.getId(), order.getUsuario().getId());
-        assertEquals(OrderStatus.NON_PAID, order.getStatus());
+        assertEquals(OrderStatus.PENDING, order.getStatus());
         assertEquals(new BigDecimal("70.00"), order.getTotalAmount());
         assertEquals(2, order.getOrderDetails().size());
         assertEquals(1L, order.getOrderDetails().getFirst().getProduct().getId());
@@ -74,6 +79,27 @@ class OrderServiceImplTests {
         assertEquals(2L, order.getOrderDetails().get(1).getProduct().getId());
         assertEquals(new BigDecimal("1"), order.getOrderDetails().get(1).getQuantity());
         assertEquals(new BigDecimal("18.00"), order.getOrderDetails().get(1).getUnitPrice());
+    }
+
+    @Test
+    void createOrderRejectsInsufficientStock() {
+        Usuario usuario = createUser("low-stock-user", "low-stock@example.com");
+        Product product = createCatalogProduct(1L, "Limited Batch", "26.00");
+        createInventory(product.getId(), 1);
+
+        OrderCreateItemRequest item = new OrderCreateItemRequest();
+        item.setProductId(product.getId());
+        item.setQuantity(2);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.createOrder(usuario.getUsername(), List.of(item))
+        );
+
+        assertEquals(
+                "Insufficient stock for product Limited Batch. Available: 1, requested: 2",
+                exception.getMessage()
+        );
     }
 
     @Test
@@ -128,41 +154,66 @@ class OrderServiceImplTests {
     }
 
     @Test
-    void updateStatusAllowsTransitionFromNonPaidToPaid() {
-        Order order = createPersistedOrder(OrderStatus.NON_PAID);
+    void updateStatusAllowsTransitionFromPendingToPaidAndConsumesStock() {
+        Order order = createPersistedOrder(OrderStatus.PENDING, 5);
 
-        Order updatedOrder = orderService.updateStatus(order.getId(), OrderStatus.PAID);
+        Order updatedOrder = orderService.updateStatus(
+                order.getId(),
+                OrderStatus.PAID,
+                order.getUsuario().getUsername()
+        );
 
         assertEquals(OrderStatus.PAID, updatedOrder.getStatus());
+        assertEquals(4, inventoryRepository.findByProductId(1L).orElseThrow().getStockQuantity());
+
+        List<InventoryMovement> movements =
+                inventoryMovementRepository.findByProductIdOrderByCreatedAtDescIdDesc(1L);
+        assertEquals(1, movements.size());
+        assertEquals(InventoryMovementType.OUT, movements.getFirst().getMovementType());
+        assertEquals(InventoryReferenceType.ORDER, movements.getFirst().getReferenceType());
+        assertEquals(order.getId(), movements.getFirst().getReferenceId());
     }
 
     @Test
     void updateStatusRejectsSameStatusTransition() {
-        Order order = createPersistedOrder(OrderStatus.NON_PAID);
+        Order order = createPersistedOrder(OrderStatus.PENDING, 5);
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> orderService.updateStatus(order.getId(), OrderStatus.NON_PAID)
+                () -> orderService.updateStatus(order.getId(), OrderStatus.PENDING, order.getUsuario().getUsername())
         );
 
-        assertEquals("Order is already in status: NON PAID", exception.getMessage());
+        assertEquals("Order is already in status: PENDING", exception.getMessage());
     }
 
     @Test
     void updateStatusRejectsChangesFromTerminalPaidStatus() {
-        Order order = createPersistedOrder(OrderStatus.PAID);
+        Order order = createPersistedOrder(OrderStatus.PAID, 5);
 
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> orderService.updateStatus(order.getId(), OrderStatus.NON_PAID)
+                () -> orderService.updateStatus(order.getId(), OrderStatus.PENDING, order.getUsuario().getUsername())
         );
 
-        assertEquals("Invalid order status transition: PAID -> NON PAID", exception.getMessage());
+        assertEquals("Invalid order status transition: PAID -> PENDING", exception.getMessage());
+    }
+
+    @Test
+    void payOrderRejectsOrdersOwnedByAnotherUser() {
+        Order order = createPersistedOrder(OrderStatus.PENDING, 5);
+        createUser("someone-else", "someone-else@example.com");
+
+        NoSuchElementException exception = assertThrows(
+                NoSuchElementException.class,
+                () -> orderService.payOrder(order.getId(), "someone-else", false)
+        );
+
+        assertEquals("Order not found: " + order.getId(), exception.getMessage());
     }
 
     @Test
     void findOrderByIdReturnsAnyOrderForAdminScopedLookups() {
-        Order order = createPersistedOrder(OrderStatus.NON_PAID);
+        Order order = createPersistedOrder(OrderStatus.PENDING, 5);
 
         Order foundOrder = orderService.findOrderById(order.getId());
 
@@ -174,17 +225,10 @@ class OrderServiceImplTests {
     void findOrderByIdReturnsPersistedLineItems() {
         Usuario usuario = createUser("history-user", "history@example.com");
 
-        Product productOne = new Product();
-        productOne.setId(1L);
-        productOne.setName("Colombia Supremo");
-        productOne.setPrice(new BigDecimal("24.00"));
-        persistProduct(productOne, 1, 1, 1, 1);
-
-        Product productTwo = new Product();
-        productTwo.setId(2L);
-        productTwo.setName("Kenya AA");
-        productTwo.setPrice(new BigDecimal("28.00"));
-        persistProduct(productTwo, 2, 2, 2, 2);
+        Product productOne = createCatalogProduct(1L, "Colombia Supremo", "24.00");
+        Product productTwo = createCatalogProduct(2L, "Kenya AA", "28.00");
+        createInventory(productOne.getId(), 10);
+        createInventory(productTwo.getId(), 10);
 
         OrderCreateItemRequest firstItem = new OrderCreateItemRequest();
         firstItem.setProductId(1L);
@@ -206,23 +250,12 @@ class OrderServiceImplTests {
 
     @Test
     void findOrderByIdForUsernameRejectsOrdersOwnedByAnotherUser() {
-        Usuario owner = new Usuario();
-        owner.setUsername("owner-user");
-        owner.setPassword("secret");
-        owner.setEmail("owner@example.com");
-        owner.setActivo(true);
-        owner = usuarioRepository.save(owner);
-
-        Usuario otherUser = new Usuario();
-        otherUser.setUsername("other-user");
-        otherUser.setPassword("secret");
-        otherUser.setEmail("other@example.com");
-        otherUser.setActivo(true);
-        usuarioRepository.save(otherUser);
+        Usuario owner = createUser("owner-user", "owner@example.com");
+        Usuario otherUser = createUser("other-user", "other@example.com");
 
         Order order = new Order();
         order.setUsuario(owner);
-        order.setStatus(OrderStatus.NON_PAID);
+        order.setStatus(OrderStatus.PENDING);
         order.setTotalAmount(new BigDecimal("18.00"));
         Order savedOrder = orderRepository.save(order);
 
@@ -244,16 +277,19 @@ class OrderServiceImplTests {
         assertTrue(exception.getMessage().contains("Invalid order status: REFUNDED"));
     }
 
-    private Order createPersistedOrder(OrderStatus status) {
+    private Order createPersistedOrder(OrderStatus status, int stockQuantity) {
         Usuario usuario = createUser(
                 "status-user-" + status.name(),
                 "status-" + status.name().toLowerCase() + "@example.com"
         );
+        Product product = createCatalogProduct(1L, "Checkout Product", "18.00");
+        createInventory(product.getId(), stockQuantity);
 
         Order order = new Order();
         order.setUsuario(usuario);
         order.setStatus(status);
         order.setTotalAmount(new BigDecimal("18.00"));
+        order.addOrderDetail(createOrderDetail(product, "18.00", 1));
 
         return orderRepository.save(order);
     }
@@ -265,6 +301,31 @@ class OrderServiceImplTests {
         usuario.setEmail(email);
         usuario.setActivo(true);
         return usuarioRepository.save(usuario);
+    }
+
+    private Product createCatalogProduct(Long productId, String name, String price) {
+        Product product = new Product();
+        product.setId(productId);
+        product.setName(name);
+        product.setPrice(new BigDecimal(price));
+        persistProduct(product, productId.intValue(), productId.intValue(), productId.intValue(), productId.intValue());
+        return product;
+    }
+
+    private OrderDetail createOrderDetail(Product product, String price, int quantity) {
+        OrderDetail detail = new OrderDetail();
+        detail.setProduct(product);
+        detail.setQuantity(BigDecimal.valueOf(quantity));
+        detail.setUnitPrice(new BigDecimal(price));
+        return detail;
+    }
+
+    private void createInventory(Long productId, int stockQuantity) {
+        jdbcTemplate.update(
+                "INSERT INTO inventory (id_product, stock_quantity) VALUES (?, ?)",
+                productId,
+                stockQuantity
+        );
     }
 
     private void persistProduct(

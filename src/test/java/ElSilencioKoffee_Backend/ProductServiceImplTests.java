@@ -1,5 +1,7 @@
 package ElSilencioKoffee_Backend;
 
+import ElSilencioKoffee_Backend.inventory.entities.Inventory;
+import ElSilencioKoffee_Backend.inventory.repositories.InventoryRepository;
 import ElSilencioKoffee_Backend.products.dto.ProductCreateRequest;
 import ElSilencioKoffee_Backend.products.dto.ProductResponse;
 import ElSilencioKoffee_Backend.products.dto.ProductUpdateRequest;
@@ -31,6 +33,9 @@ class ProductServiceImplTests {
     private ProductRepository productRepository;
 
     @Autowired
+    private InventoryRepository inventoryRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Test
@@ -51,21 +56,25 @@ class ProductServiceImplTests {
         assertEquals(new BigDecimal("24.50"), response.getPrice());
         assertEquals(1L, response.getPresentationId());
         assertEquals(1L, response.getProductionId());
+        assertEquals(0, response.getStockQuantity());
     }
 
     @Test
-    void listProductsReturnsPersistedProducts() {
+    void listProductsReturnsPersistedProductsWithStock() {
         seedCatalogReferences(1);
         seedCatalogReferences(2);
 
-        productService.create(createRequest("Geisha", null, "35.00", 1L, 1L));
-        productService.create(createRequest("Bourbon", null, "21.00", 2L, 2L));
+        ProductResponse geisha = productService.create(createRequest("Geisha", null, "35.00", 1L, 1L));
+        ProductResponse bourbon = productService.create(createRequest("Bourbon", null, "21.00", 2L, 2L));
+        createInventory(bourbon.getId(), 9);
 
         List<ProductResponse> products = productService.findAll();
 
         assertEquals(2, products.size());
         assertEquals("Geisha", products.getFirst().getName());
+        assertEquals(0, products.getFirst().getStockQuantity());
         assertEquals("Bourbon", products.get(1).getName());
+        assertEquals(9, products.get(1).getStockQuantity());
     }
 
     @Test
@@ -194,5 +203,12 @@ class ProductServiceImplTests {
                 "Presentation " + key,
                 "Description " + key
         );
+    }
+
+    private void createInventory(Long productId, int stockQuantity) {
+        Inventory inventory = new Inventory();
+        inventory.setProduct(productRepository.findById(productId).orElseThrow());
+        inventory.setStockQuantity(stockQuantity);
+        inventoryRepository.save(inventory);
     }
 }

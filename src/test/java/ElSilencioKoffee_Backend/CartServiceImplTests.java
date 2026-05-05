@@ -147,7 +147,7 @@ class CartServiceImplTests {
     }
 
     @Test
-    void clearCartDeletesPersistedCartState() {
+    void clearCartRemovesItemsButPreservesPersistentCart() {
         Usuario usuario = createUser("cart-clear-user");
         Product product = createProduct(1, "Clear Coffee", "9.00");
         cartService.addItem(usuario.getUsername(), addRequest(product.getId(), 4));
@@ -157,7 +157,8 @@ class CartServiceImplTests {
         assertEquals(usuario.getId(), cleared.getUserId());
         assertEquals(0, cleared.getTotalItems());
         assertTrue(cleared.getItems().isEmpty());
-        assertFalse(cartRepository.findByUsuarioUsername(usuario.getUsername()).isPresent());
+        assertTrue(cartRepository.findByUsuarioUsername(usuario.getUsername()).isPresent());
+        assertTrue(cartRepository.findByUsuarioUsername(usuario.getUsername()).orElseThrow().getItems().isEmpty());
     }
 
     @Test
@@ -192,7 +193,9 @@ class CartServiceImplTests {
         product.setPrice(new BigDecimal(price));
         product.setPresentationId(key);
         product.setProductionId(key);
-        return productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
+        createInventory(savedProduct.getId(), 50);
+        return savedProduct;
     }
 
     private AddCartItemRequest addRequest(Long productId, Integer quantity) {
@@ -231,6 +234,14 @@ class CartServiceImplTests {
                 key,
                 "Presentation " + key,
                 "Description " + key
+        );
+    }
+
+    private void createInventory(Long productId, int stockQuantity) {
+        jdbcTemplate.update(
+                "INSERT INTO inventory (id_product, stock_quantity) VALUES (?, ?)",
+                productId,
+                stockQuantity
         );
     }
 }

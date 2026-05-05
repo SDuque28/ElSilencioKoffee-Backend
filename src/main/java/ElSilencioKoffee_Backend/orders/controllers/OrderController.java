@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/orders")
+@RequestMapping({"/orders", "/api/v1/orders"})
 @RequiredArgsConstructor
 public class OrderController {
 
@@ -80,9 +80,17 @@ public class OrderController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<OrderResponse> updateStatus(@PathVariable Long id,
+    public ResponseEntity<OrderResponse> updateStatus(Authentication authentication,
+                                                      @PathVariable Long id,
                                                       @RequestBody OrderStatusUpdateRequest request) {
-        Order order = orderService.updateStatus(id, request.getStatus());
+        Order order = orderService.updateStatus(id, request.getStatus(), authentication.getName());
+        return ResponseEntity.ok(OrderResponseMapper.toResponse(order));
+    }
+
+    @PostMapping("/{id}/pay")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<OrderResponse> payOrder(Authentication authentication, @PathVariable Long id) {
+        Order order = orderService.payOrder(id, authentication.getName(), isAdmin(authentication));
         return ResponseEntity.ok(OrderResponseMapper.toResponse(order));
     }
 

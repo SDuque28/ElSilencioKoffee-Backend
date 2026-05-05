@@ -4,7 +4,9 @@ import ElSilencioKoffee_Backend.inventory.dto.InventoryMovementCreateRequest;
 import ElSilencioKoffee_Backend.inventory.dto.InventoryMovementResponse;
 import ElSilencioKoffee_Backend.inventory.dto.InventoryResponse;
 import ElSilencioKoffee_Backend.inventory.dto.StockAdjustmentRequest;
+import ElSilencioKoffee_Backend.orders.entities.Order;
 
+import java.util.Map;
 import java.util.List;
 
 public interface IInventoryService {
@@ -22,4 +24,8 @@ public interface IInventoryService {
     InventoryResponse decreaseStock(Long inventoryId, StockAdjustmentRequest request, String username);
 
     InventoryResponse registerMovement(Long inventoryId, InventoryMovementCreateRequest request, String username);
+
+    void ensureSufficientStock(Map<Long, Integer> requestedQuantities);
+
+    void consumeStockForOrder(Order order, String username);
 }
