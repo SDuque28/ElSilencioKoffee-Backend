@@ -1,0 +1,220 @@
+@startuml
+' ========================================================================
+' Diagrama de Base de Datos - Silencio Koffee DB
+' Nombre de tabla mas grande, estereotipo mas pequeno, sin emojis
+' ========================================================================
+
+!theme plain
+skinparam backgroundColor #ffffff
+skinparam defaultFontName "Segoe UI, Helvetica, sans-serif"
+skinparam defaultFontSize 11
+skinparam shadowing true
+skinparam roundedCorners 8
+skinparam linetype ortho
+skinparam stereotypePosition bottom
+skinparam classStereotypeFontSize 10
+
+' Estilos de paquetes
+skinparam package {
+  BackgroundColor #F5F0E1
+  BorderColor #B59B6C
+  BorderThickness 2
+  FontColor #5D3A1A
+  FontStyle bold
+  FontSize 13
+}
+
+' Estilos generales de clases (tablas)
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #8B7355
+  BorderThickness 1.5
+  FontName "Segoe UI"
+  FontSize 18
+  StereotypeFontSize 10
+  AttributeFontColor #2C3E50
+  AttributeFontSize 10
+}
+
+' Estilos por estereotipo: solo colores y bordes
+skinparam class<<seguridad>> {
+  BackgroundColor #FFE4E1
+  BorderColor #CD5C5C
+}
+
+skinparam class<<produccion>> {
+  BackgroundColor #E0F7E8
+  BorderColor #2E8B57
+}
+
+skinparam class<<producto>> {
+  BackgroundColor #E6E6FA
+  BorderColor #6A5ACD
+}
+
+skinparam class<<inventario>> {
+  BackgroundColor #FFFACD
+  BorderColor #DAA520
+}
+
+skinparam class<<ventas>> {
+  BackgroundColor #E0F0FF
+  BorderColor #4682B4
+}
+
+' Estilos de flechas
+skinparam arrow {
+  Color #8B7355
+  FontColor #8B7355
+  FontSize 9
+}
+
+' ========================================================================
+' MODULO DE SEGURIDAD Y USUARIOS
+' ========================================================================
+package "Seguridad y Usuarios" {
+
+  class usuario <<seguridad>> {
+    + id : BIGINT <<PK>>
+    --
+    username : VARCHAR(100)
+    email : VARCHAR(100)
+    password : VARCHAR(255)
+    activo : BOOLEAN
+    created_at : TIMESTAMP
+  }
+
+  class rol <<seguridad>> {
+    + id : BIGINT <<PK>>
+    --
+    nombre : VARCHAR(50)
+  }
+
+  class usuario_rol <<seguridad>> {
+    + usuario_id : BIGINT <<PK>>
+    + rol_id : BIGINT <<PK>>
+  }
+}
+
+' ========================================================================
+' MODULO DE PRODUCCION AGRICOLA
+' ========================================================================
+package "Produccion Agricola" {
+
+  class sections <<produccion>> {
+    + id_section : INT UNSIGNED <<PK>>
+    --
+    name : VARCHAR(80)
+    location : VARCHAR(150)
+    capacity : INT UNSIGNED
+  }
+
+  class varieties <<produccion>> {
+    + id_variety : INT UNSIGNED <<PK>>
+    --
+    name : VARCHAR(100)
+    description : TEXT
+  }
+
+  class production <<produccion>> {
+    + id_production : INT UNSIGNED <<PK>>
+    --
+    id_section : INT UNSIGNED <<FK>>
+    date_collection : DATE
+    quantity_kg : NUMERIC(10,2)
+    id_variety : INT UNSIGNED <<FK>>
+  }
+}
+
+' ========================================================================
+' MODULO DE PRODUCTOS Y PRESENTACIONES
+' ========================================================================
+package "Productos y Presentaciones" {
+
+  class product_presentations <<producto>> {
+    + id_presentation : INT UNSIGNED <<PK>>
+    --
+    name : VARCHAR(50)
+    description : TEXT
+  }
+
+  class products <<producto>> {
+    + id_product : BIGINT UNSIGNED <<PK>>
+    --
+    name : VARCHAR(100)
+    price : NUMERIC(10,2)
+    id_presentation : INT UNSIGNED <<FK>>
+    id_production : INT UNSIGNED <<FK>>
+  }
+}
+
+' ========================================================================
+' MODULO DE INVENTARIO
+' ========================================================================
+package "Inventario" {
+
+  class inventory <<inventario>> {
+    + id : INT UNSIGNED <<PK>>
+    --
+    id_product : BIGINT UNSIGNED <<FK>>
+    stock_quantity : INT
+  }
+
+  class inventory_movements <<inventario>> {
+    + id_movement : BIGINT UNSIGNED <<PK>>
+    --
+    id_product : BIGINT UNSIGNED <<FK>>
+    movement_type : ENUM
+    quantity : DECIMAL(10,2)
+    reference_id : BIGINT
+    reference_type : ENUM
+    created_at : DATETIME
+    created_by : BIGINT UNSIGNED <<FK>>
+  }
+}
+
+' ========================================================================
+' MODULO DE VENTAS
+' ========================================================================
+package "Ventas y Ordenes" {
+
+  class orders <<ventas>> {
+    + id_order : BIGINT UNSIGNED <<PK>>
+    --
+    id_user : BIGINT UNSIGNED <<FK>>
+    order_date : DATETIME
+    total_amount : NUMERIC(10,2)
+    status : ENUM
+  }
+
+  class orders_details <<ventas>> {
+    + id_details : BIGINT UNSIGNED <<PK>>
+    --
+    id_order : BIGINT UNSIGNED <<FK>>
+    id_product : BIGINT UNSIGNED <<FK>>
+    quantity : NUMERIC(10,2)
+    unit_price : NUMERIC(10,2)
+  }
+}
+
+' ========================================================================
+' RELACIONES
+' ========================================================================
+usuario_rol --> usuario : "usuario_id"
+usuario_rol --> rol : "rol_id"
+
+production --> sections : "id_section"
+production --> varieties : "id_variety"
+
+products --> product_presentations : "id_presentation"
+products --> production : "id_production"
+
+inventory --> products : "id_product"
+inventory_movements --> products : "id_product"
+inventory_movements --> usuario : "created_by"
+
+orders --> usuario : "id_user"
+orders_details --> orders : "id_order"
+orders_details --> products : "id_product"
+
+@enduml
