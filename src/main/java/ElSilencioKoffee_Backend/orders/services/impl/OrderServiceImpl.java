@@ -1,6 +1,8 @@
 package ElSilencioKoffee_Backend.orders.services.impl;
 
 import ElSilencioKoffee_Backend.orders.dto.OrderCreateItemRequest;
+import ElSilencioKoffee_Backend.orders.entities.DeliveryOrder;
+import ElSilencioKoffee_Backend.orders.entities.DeliveryStatus;
 import ElSilencioKoffee_Backend.orders.entities.Order;
 import ElSilencioKoffee_Backend.orders.entities.OrderDetail;
 import ElSilencioKoffee_Backend.orders.entities.OrderStatus;
@@ -115,6 +117,26 @@ public class OrderServiceImpl implements IOrderService {
         return performStatusTransition(order, OrderStatus.PAID, username);
     }
 
+    @Override
+    @Transactional
+    public Order updateDeliveryStatus(Long id, DeliveryStatus status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Delivery status is required");
+        }
+
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + id));
+        DeliveryOrder deliveryOrder = order.getDeliveryOrder();
+
+        if (deliveryOrder == null) {
+            throw new IllegalArgumentException("Delivery status is not available for order: " + id);
+        }
+
+        validateDeliveryStatusTransition(order.getStatus(), deliveryOrder.getStatus(), status);
+        deliveryOrder.setStatus(status);
+        return orderRepository.save(order);
+    }
+
     private Order performStatusTransition(Order order, OrderStatus nextStatus, String actorUsername) {
         validateStatusTransition(order.getStatus(), nextStatus);
 
@@ -216,6 +238,40 @@ public class OrderServiceImpl implements IOrderService {
 
         throw new IllegalArgumentException(
                 "Invalid order status transition: " + currentStatus.toJson() + " -> " + nextStatus.toJson()
+        );
+    }
+
+    private void validateDeliveryStatusTransition(
+            OrderStatus orderStatus,
+            DeliveryStatus currentStatus,
+            DeliveryStatus nextStatus
+    ) {
+        if (orderStatus != OrderStatus.PAID) {
+            throw new IllegalArgumentException("Delivery status can only be updated for paid orders");
+        }
+
+        if (currentStatus == nextStatus) {
+            throw new IllegalArgumentException("Delivery order is already in status: " + nextStatus.toJson());
+        }
+
+        if (currentStatus == DeliveryStatus.DELIVERED || currentStatus == DeliveryStatus.CANCELLED) {
+            throw new IllegalArgumentException(
+                    "Invalid delivery status transition: " + currentStatus.toJson() + " -> " + nextStatus.toJson()
+            );
+        }
+
+        if (currentStatus == DeliveryStatus.PENDING
+                && (nextStatus == DeliveryStatus.OUT_FOR_SHIPMENT || nextStatus == DeliveryStatus.CANCELLED)) {
+            return;
+        }
+
+        if (currentStatus == DeliveryStatus.OUT_FOR_SHIPMENT
+                && (nextStatus == DeliveryStatus.DELIVERED || nextStatus == DeliveryStatus.CANCELLED)) {
+            return;
+        }
+
+        throw new IllegalArgumentException(
+                "Invalid delivery status transition: " + currentStatus.toJson() + " -> " + nextStatus.toJson()
         );
     }
 }

@@ -6,6 +6,8 @@ import ElSilencioKoffee_Backend.inventory.entities.InventoryReferenceType;
 import ElSilencioKoffee_Backend.inventory.repositories.InventoryMovementRepository;
 import ElSilencioKoffee_Backend.inventory.repositories.InventoryRepository;
 import ElSilencioKoffee_Backend.orders.dto.OrderCreateItemRequest;
+import ElSilencioKoffee_Backend.orders.entities.DeliveryOrder;
+import ElSilencioKoffee_Backend.orders.entities.DeliveryStatus;
 import ElSilencioKoffee_Backend.orders.entities.Order;
 import ElSilencioKoffee_Backend.orders.entities.OrderDetail;
 import ElSilencioKoffee_Backend.orders.entities.OrderStatus;
@@ -199,6 +201,27 @@ class OrderServiceImplTests {
     }
 
     @Test
+    void updateDeliveryStatusAllowsShipmentProgressForPaidOrders() {
+        Order order = createPersistedOrderWithDelivery(OrderStatus.PAID, DeliveryStatus.PENDING, 5);
+
+        Order updatedOrder = orderService.updateDeliveryStatus(order.getId(), DeliveryStatus.OUT_FOR_SHIPMENT);
+
+        assertEquals(DeliveryStatus.OUT_FOR_SHIPMENT, updatedOrder.getDeliveryOrder().getStatus());
+    }
+
+    @Test
+    void updateDeliveryStatusRejectsUnpaidOrders() {
+        Order order = createPersistedOrderWithDelivery(OrderStatus.PENDING, DeliveryStatus.PENDING, 5);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> orderService.updateDeliveryStatus(order.getId(), DeliveryStatus.OUT_FOR_SHIPMENT)
+        );
+
+        assertEquals("Delivery status can only be updated for paid orders", exception.getMessage());
+    }
+
+    @Test
     void payOrderRejectsOrdersOwnedByAnotherUser() {
         Order order = createPersistedOrder(OrderStatus.PENDING, 5);
         createUser("someone-else", "someone-else@example.com");
@@ -291,6 +314,14 @@ class OrderServiceImplTests {
         order.setTotalAmount(new BigDecimal("18.00"));
         order.addOrderDetail(createOrderDetail(product, "18.00", 1));
 
+        return orderRepository.save(order);
+    }
+
+    private Order createPersistedOrderWithDelivery(OrderStatus status, DeliveryStatus deliveryStatus, int stockQuantity) {
+        Order order = createPersistedOrder(status, stockQuantity);
+        DeliveryOrder deliveryOrder = new DeliveryOrder();
+        deliveryOrder.setStatus(deliveryStatus);
+        order.setDeliveryOrder(deliveryOrder);
         return orderRepository.save(order);
     }
 

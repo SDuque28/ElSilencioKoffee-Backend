@@ -24,10 +24,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -58,6 +62,15 @@ class AdminOrderControllerSecurityTests {
         mockMvc.perform(get("/api/v1/admin/orders/12"))
                 .andExpect(status().isForbidden());
 
+        mockMvc.perform(
+                        patch("/api/v1/admin/orders/12/delivery-status")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                        {"status":"OUT_FOR_SHIPMENT"}
+                                        """)
+                )
+                .andExpect(status().isForbidden());
+
         verifyNoInteractions(orderService);
     }
 
@@ -81,6 +94,27 @@ class AdminOrderControllerSecurityTests {
                 .andExpect(jsonPath("$.customer.email").value("customer-1@example.com"))
                 .andExpect(jsonPath("$.payment.transactionReference").value("SIM-ORDER000012"))
                 .andExpect(jsonPath("$.deliveryOrder.status").value("OUT_FOR_SHIPMENT"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void adminsCanUpdateDeliveryStatus() throws Exception {
+        Order order = adminOrder();
+        order.getDeliveryOrder().setStatus(DeliveryStatus.DELIVERED);
+        when(orderService.updateDeliveryStatus(eq(12L), eq(DeliveryStatus.DELIVERED))).thenReturn(order);
+
+        mockMvc.perform(
+                        patch("/api/v1/admin/orders/12/delivery-status")
+                                .contentType(APPLICATION_JSON)
+                                .content("""
+                                        {"status":"DELIVERED"}
+                                        """)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(12))
+                .andExpect(jsonPath("$.deliveryOrder.status").value("DELIVERED"));
+
+        verify(orderService).updateDeliveryStatus(12L, DeliveryStatus.DELIVERED);
     }
 
     private Order adminOrder() {

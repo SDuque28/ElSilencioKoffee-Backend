@@ -1,6 +1,7 @@
 package ElSilencioKoffee_Backend.orders.services;
 
 import ElSilencioKoffee_Backend.orders.dto.OrderCreateItemRequest;
+import ElSilencioKoffee_Backend.orders.entities.DeliveryStatus;
 import ElSilencioKoffee_Backend.orders.entities.Order;
 import ElSilencioKoffee_Backend.orders.entities.OrderStatus;
 import org.springframework.data.domain.Page;
@@ -25,6 +26,8 @@ public interface IOrderService {
     Order findOrderByIdForUsername(Long id, String username);
 
     Order updateStatus(Long id, OrderStatus status, String actorUsername);
+
+    Order updateDeliveryStatus(Long id, DeliveryStatus status);
 
     Order payOrder(Long id, String username, boolean isAdmin);
 }
