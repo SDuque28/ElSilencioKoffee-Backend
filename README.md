@@ -169,6 +169,11 @@ Important variables:
 
 ```bash
 SPRING_APPLICATION_NAME=ElSilencioKoffee-Backend
+PORT=8080
+SERVER_PORT=8080
+DB_URL=jdbc:mysql://localhost:3306/silencio_koffee_db
+DB_USERNAME=your_db_user
+DB_PASSWORD=your_db_password
 SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/silencio_koffee_db
 SPRING_DATASOURCE_USERNAME=your_db_user
 SPRING_DATASOURCE_PASSWORD=your_db_password
@@ -176,11 +181,11 @@ SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
 SPRING_JPA_HIBERNATE_DDL_AUTO=none
 SPRING_JPA_SHOW_SQL=false
 SPRING_JPA_OPEN_IN_VIEW=false
-SERVER_PORT=8080
 JWT_SECRET=replace-with-a-32-byte-minimum-secret
 JWT_EXPIRATION=3600000
 SPRING_PROFILES_ACTIVE=default
 CORS_ALLOWED_ORIGINS=http://localhost:4200
+APP_CORS_ALLOWED_ORIGINS=http://localhost:4200
 ```
 
 ### Production Notes
@@ -189,6 +194,72 @@ CORS_ALLOWED_ORIGINS=http://localhost:4200
 - configure `CORS_ALLOWED_ORIGINS` explicitly in production
 - use a strong `JWT_SECRET` with at least 32 bytes
 - keep `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` or another explicitly chosen value for deployed environments
+- Render can use `PORT`, `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` directly
+
+## Render Deployment
+
+This backend is prepared for Render Web Service deployment using Docker.
+
+### Render runtime behavior
+
+- the production profile listens on `PORT` with fallback `10000`
+- the app binds to `0.0.0.0`
+- datasource values can come from `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD`
+- local variables like `SPRING_DATASOURCE_URL` and `SERVER_PORT` still work for development
+
+### Files used for deployment
+
+- [`Dockerfile`](./Dockerfile)
+- [`.dockerignore`](./.dockerignore)
+- [`src/main/resources/application-prod.properties`](./src/main/resources/application-prod.properties)
+
+### Render environment variables
+
+Set these in your Render service:
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
+PORT=10000
+DB_URL=jdbc:mysql://<host>:3306/<database>
+DB_USERNAME=<username>
+DB_PASSWORD=<password>
+JWT_SECRET=<minimum-32-byte-secret>
+JWT_EXPIRATION=3600000
+CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
+```
+
+Optional:
+
+```bash
+APP_CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+```
+
+### Render build and start
+
+Render will build from the Dockerfile. No custom start command is required.
+
+Locally, the equivalent Docker build is:
+
+```bash
+docker build -t el-silencio-koffee-backend .
+```
+
+And a local Docker run example is:
+
+```bash
+docker run --rm -p 10000:10000 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e PORT=10000 \
+  -e DB_URL=jdbc:mysql://host.docker.internal:3306/silencio_koffee_db \
+  -e DB_USERNAME=your_db_user \
+  -e DB_PASSWORD=your_db_password \
+  -e JWT_SECRET=replace-with-a-32-byte-minimum-secret \
+  -e CORS_ALLOWED_ORIGINS=http://localhost:4200 \
+  el-silencio-koffee-backend
+```
+
+The Docker image uses `-Dmaven.test.skip=true` during packaging so container builds are not blocked by test compilation. Keep `./mvnw test` as a separate CI step to verify the backend before deployment.
 
 ## Database and Migrations
 

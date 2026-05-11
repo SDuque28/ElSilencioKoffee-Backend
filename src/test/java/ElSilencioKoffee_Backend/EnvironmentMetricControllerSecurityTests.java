@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -34,7 +34,7 @@ class EnvironmentMetricControllerSecurityTests {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    @MockitoBean
+    @MockBean
     private IEnvironmentMetricService environmentMetricService;
 
     private MockMvc mockMvc;
