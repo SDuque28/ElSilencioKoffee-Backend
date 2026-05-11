@@ -36,18 +36,20 @@ CREATE TABLE usuario_rol (
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
--- _____SECTIONS TABLE_____
+-- ─────────────────────────────────────────
+-- Tabla de secciones
+-- ─────────────────────────────────────────
 
 CREATE TABLE sections (
 	id_section INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(80) NOT NULL,
-    loction VARCHAR(150) NOT NULL,
+    location VARCHAR(150) NOT NULL,
     capacity INT UNSIGNED
 );
 
-
--- _____VARIETIES_____
-
+-- ─────────────────────────────────────────
+-- Tabla de variedades
+-- ─────────────────────────────────────────
 CREATE TABLE varieties(
 	id_variety INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,
@@ -55,8 +57,9 @@ CREATE TABLE varieties(
 );
 
 
--- _____PRODUCTIONS TABLE_____
-
+-- ─────────────────────────────────────────
+-- Tabla de producciones
+-- ─────────────────────────────────────────
 CREATE TABLE production(
 	id_production INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_section INT UNSIGNED NOT NULL,
@@ -70,21 +73,22 @@ CREATE TABLE production(
 CREATE INDEX idx_production_section ON production(id_section);
 CREATE INDEX idx_production_variety ON production(id_variety);
 
-
--- _____PRESENTATIONS TABLE_____
-
+-- ─────────────────────────────────────────
+-- Tabla de presentaciones
+-- ─────────────────────────────────────────
 CREATE TABLE product_presentations (
     id_presentation INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     description TEXT
 );
 
-
--- _____PRODUCTS TABLE_____
-
+-- ─────────────────────────────────────────
+-- Tabla de productos
+-- ─────────────────────────────────────────
 CREATE TABLE products (
     id_product SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
+    image_url VARCHAR(255),
     price NUMERIC(10,2) NOT NULL,
     id_presentation INT UNSIGNED NOT NULL,
     id_production INT UNSIGNED NOT NULL,
@@ -95,9 +99,9 @@ CREATE TABLE products (
 CREATE INDEX idx_products_presentation ON products(id_presentation);
 CREATE INDEX idx_products_production ON products(id_production);
 
-
--- _____INVENTORY_____
-
+-- ─────────────────────────────────────────
+-- Tabla de inventario
+-- ─────────────────────────────────────────
 CREATE TABLE inventory (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_product BIGINT UNSIGNED NOT NULL,
@@ -105,9 +109,9 @@ CREATE TABLE inventory (
     FOREIGN KEY (id_product) REFERENCES products(id_product)
 );
 
-
--- _____MOVEMENTS TABLE_____
-
+-- ─────────────────────────────────────────
+-- Tabla de movimientos de inventario
+-- ─────────────────────────────────────────
 CREATE TABLE inventory_movements (
     id_movement SERIAL PRIMARY KEY,
     id_product BIGINT UNSIGNED NOT NULL,
@@ -118,28 +122,28 @@ CREATE TABLE inventory_movements (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     created_by BIGINT UNSIGNED NOT NULL,
     FOREIGN KEY (id_product) REFERENCES products(id_product),
-    FOREIGN KEY (created_by) REFERENCES users(id_user)
+    FOREIGN KEY (created_by) REFERENCES usuario(id)
 );
 
 CREATE INDEX idx_inventory_movements_product ON inventory_movements(id_product);
 
-
--- _____ORDERS TABLE_____
-
+-- ─────────────────────────────────────────
+-- Tabla de órdenes
+-- ─────────────────────────────────────────
 CREATE TABLE orders (
     id_order SERIAL PRIMARY KEY,
-    id_user BIGINT UNSIGNED NOT NULL,
+    id_user BIGINT NOT NULL,
     order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    total_amount NUMERIC(10,2),
-    status ENUM("PAID", "NON PAID"),
-    FOREIGN KEY (id_user) REFERENCES users(id_user)
+    total_amount NUMERIC(10,2) NOT NULL,
+    status ENUM("PAID", "NON PAID") NOT NULL DEFAULT "NON PAID",
+    FOREIGN KEY (id_user) REFERENCES usuario(id)
 );
 
 CREATE INDEX idx_orders_user ON orders(id_user);
 
-
--- _____ORDER DETAILS_____
-
+-- ─────────────────────────────────────────
+-- Tabla de detalles de órdenes
+-- ─────────────────────────────────────────
 CREATE TABLE orders_details (
     id_details SERIAL PRIMARY KEY,
     id_order BIGINT UNSIGNED NOT NULL,
