@@ -1,13 +1,16 @@
 package ElSilencioKoffee_Backend.orders.controllers;
 
 import ElSilencioKoffee_Backend.orders.dto.AdminOrderDetailResponse;
+import ElSilencioKoffee_Backend.orders.dto.DeliveryStatusUpdateRequest;
 import ElSilencioKoffee_Backend.orders.dto.OrderResponseMapper;
 import ElSilencioKoffee_Backend.orders.services.IOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,5 +36,16 @@ public class AdminOrderController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AdminOrderDetailResponse> findOrderById(@PathVariable Long id) {
         return ResponseEntity.ok(OrderResponseMapper.toAdminDetailResponse(orderService.findOrderById(id)));
+    }
+
+    @PatchMapping("/{id}/delivery-status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AdminOrderDetailResponse> updateDeliveryStatus(
+            @PathVariable Long id,
+            @RequestBody DeliveryStatusUpdateRequest request
+    ) {
+        return ResponseEntity.ok(
+                OrderResponseMapper.toAdminDetailResponse(orderService.updateDeliveryStatus(id, request.getStatus()))
+        );
     }
 }
