@@ -1,5 +1,6 @@
 package ElSilencioKoffee_Backend.products.services.impl;
 
+import ElSilencioKoffee_Backend.inventory.entities.Inventory;
 import ElSilencioKoffee_Backend.inventory.repositories.InventoryRepository;
 import ElSilencioKoffee_Backend.products.dto.ProductCreateRequest;
 import ElSilencioKoffee_Backend.products.dto.ProductResponse;
@@ -54,7 +55,9 @@ public class ProductServiceImpl implements IProductService {
     public ProductResponse update(Long id, ProductUpdateRequest request) {
         Product product = findProduct(id);
         applyRequest(product, request);
-        return toResponse(saveProduct(product));
+        Product savedProduct = saveProduct(product);
+        syncInventory(savedProduct, request.getStockQuantity());
+        return toResponse(savedProduct);
     }
 
     @Override
@@ -100,6 +103,22 @@ public class ProductServiceImpl implements IProductService {
         product.setPrice(validatePrice(request.getPrice()));
         product.setPresentationId(validateReferenceId(request.getPresentationId(), "Presentation ID"));
         product.setProductionId(validateReferenceId(request.getProductionId(), "Production ID"));
+    }
+
+    private void syncInventory(Product product, Integer stockQuantity) {
+        if (stockQuantity == null) {
+            return;
+        }
+
+        Inventory inventory = inventoryRepository.findByProductId(product.getId())
+                .orElseGet(() -> {
+                    Inventory newInventory = new Inventory();
+                    newInventory.setProduct(product);
+                    return newInventory;
+                });
+
+        inventory.setStockQuantity(validateStockQuantity(stockQuantity));
+        inventoryRepository.save(inventory);
     }
 
     private String normalizeName(String name) {
@@ -149,6 +168,13 @@ public class ProductServiceImpl implements IProductService {
             throw new IllegalArgumentException(label + " must be greater than 0");
         }
         return Math.toIntExact(id);
+    }
+
+    private Integer validateStockQuantity(Integer stockQuantity) {
+        if (stockQuantity < 0) {
+            throw new IllegalArgumentException("Stock quantity must be greater than or equal to 0");
+        }
+        return stockQuantity;
     }
 
     private ProductResponse toResponse(Product product) {

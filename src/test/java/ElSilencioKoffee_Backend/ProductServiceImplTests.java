@@ -101,6 +101,7 @@ class ProductServiceImplTests {
         updateRequest.setPrice(new BigDecimal("22.00"));
         updateRequest.setPresentationId(2L);
         updateRequest.setProductionId(2L);
+        updateRequest.setStockQuantity(14);
 
         ProductResponse updated = productService.update(created.getId(), updateRequest);
 
@@ -110,6 +111,7 @@ class ProductServiceImplTests {
         assertEquals(new BigDecimal("22.00"), updated.getPrice());
         assertEquals(2L, updated.getPresentationId());
         assertEquals(2L, updated.getProductionId());
+        assertEquals(14, updated.getStockQuantity());
     }
 
     @Test
@@ -155,6 +157,26 @@ class ProductServiceImplTests {
         );
 
         assertEquals("Product name is required", exception.getMessage());
+    }
+
+    @Test
+    void updateProductRejectsNegativeStockQuantity() {
+        seedCatalogReferences(1);
+        ProductResponse created = productService.create(createRequest("Bourbon", null, "18.50", 1L, 1L));
+
+        ProductUpdateRequest request = new ProductUpdateRequest();
+        request.setName("Bourbon");
+        request.setPrice(new BigDecimal("18.50"));
+        request.setPresentationId(1L);
+        request.setProductionId(1L);
+        request.setStockQuantity(-1);
+
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> productService.update(created.getId(), request)
+        );
+
+        assertEquals("Stock quantity must be greater than or equal to 0", exception.getMessage());
     }
 
     private ProductCreateRequest createRequest(
